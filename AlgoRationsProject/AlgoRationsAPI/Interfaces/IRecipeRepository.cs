@@ -4,9 +4,9 @@ namespace AlgoRationsAPI.Interfaces;
 
 public interface IRecipeRepository
 {
-  List<Recipe> GetAll();
-  Recipe GetById();
-  Recipe Add();
-  Recipe Update();
-  bool Delete();
+  IEnumerable<Recipe> GetAll();
+  Recipe? GetById(Guid id);
+  void Add(Recipe recipe);
+  Recipe? Update(Recipe recipe);
+  bool Delete(Guid id);
 }

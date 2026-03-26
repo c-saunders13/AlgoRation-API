@@ -4,9 +4,9 @@ namespace AlgoRationsAPI.Interfaces;
 
 public interface IIngredientRepository
 {
-  List<Ingredient> GetAll();
-  Ingredient GetById();
-  Ingredient Add();
-  Ingredient Update();
-  bool Delete();
+  IEnumerable<Ingredient> GetAll();
+  Ingredient? GetById(Guid id);
+  Ingredient Add(Ingredient ingredient);
+  Ingredient? Update(Ingredient ingredient);
+  bool Delete(Guid id);
 }

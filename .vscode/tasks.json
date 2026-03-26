@@ -1,0 +1,18 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "test: api controllers",
+      "type": "shell",
+      "command": "dotnet",
+      "args": [
+        "test",
+        "${workspaceFolder}/AlgoRationsProject/AlgoRationsAPI.Tests/AlgoRationsAPI.Tests.csproj",
+        "--logger",
+        "console;verbosity=minimal"
+      ],
+      "group": "test",
+      "problemMatcher": "$msCompile"
+    }
+  ]
+}
