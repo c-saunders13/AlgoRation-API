@@ -1,8 +1,8 @@
 namespace AlgoRationsAPI.Models;
 
-public class Recipe
+public class RecipeIngredient
 {
   public Guid Id { get; set; }
   public string Name { get; set; } = string.Empty;
-  public List<RecipeIngredient> Ingredients { get; set; } = [];
+  public int Quantity { get; set; }
 }
