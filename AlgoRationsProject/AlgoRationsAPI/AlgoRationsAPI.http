@@ -1,0 +1,6 @@
+@AlgoRationsAPI_HostAddress = http://localhost:5171
+
+GET {{AlgoRationsAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
