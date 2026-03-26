@@ -1,6 +1,7 @@
 using AlgoRationsAPI.Data;
 using AlgoRationsAPI.Interfaces;
 using AlgoRationsAPI.Repositories;
+using AlgoRationsAPI.Services;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,6 +17,7 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddSingleton<IIngredientRepository, IngredientRepository>();
 builder.Services.AddSingleton<IRecipeRepository, RecipeRepository>();
+builder.Services.AddScoped<IRationsService, RationsService>();
 
 var app = builder.Build();
 
