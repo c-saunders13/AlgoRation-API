@@ -29,13 +29,14 @@ public class IngredientRepository : IIngredientRepository
     return existing;
   }
 
-  public Ingredient? Delete(Guid id)
+  public bool Delete(Guid id)
   {
     var ingredient = GetById(id);
     if (ingredient != null)
     {
       _ingredients.Remove(ingredient);
+      return true;
     }
-    return ingredient;
+    return false;
   }
 }

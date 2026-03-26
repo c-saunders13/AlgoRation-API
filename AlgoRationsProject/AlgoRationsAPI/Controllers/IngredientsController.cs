@@ -78,12 +78,6 @@ public class IngredientsController(IIngredientRepository repository) : Controlle
   [HttpDelete("{id:guid}")]
   public IActionResult Delete(Guid id)
   {
-    var deleted = repository.Delete(id);
-    if (deleted == null)
-    {
-      return NotFound();
-    }
-
-    return NoContent();
+    return repository.Delete(id) ? NoContent() : NotFound();
   }
 }

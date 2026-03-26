@@ -8,5 +8,5 @@ public interface IIngredientRepository
   Ingredient? GetById(Guid id);
   Ingredient Add(Ingredient ingredient);
   Ingredient? Update(Ingredient ingredient);
-  Ingredient? Delete(Guid id);
+  bool Delete(Guid id);
 }
