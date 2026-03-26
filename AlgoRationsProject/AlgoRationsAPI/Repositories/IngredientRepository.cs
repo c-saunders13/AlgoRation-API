@@ -11,10 +11,11 @@ public class IngredientRepository : IIngredientRepository
 
   public Ingredient? GetById(Guid id) => _ingredients.FirstOrDefault(i => i.Id == id);
 
-  public void Add(Ingredient ingredient)
+  public Ingredient Add(Ingredient ingredient)
   {
     ingredient.Id = Guid.NewGuid();
     _ingredients.Add(ingredient);
+    return ingredient;
   }
 
   public Ingredient? Update(Ingredient ingredient)

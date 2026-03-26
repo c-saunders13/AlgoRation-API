@@ -28,13 +28,14 @@ public class RecipeRepository : IRecipeRepository
     return existing;
   }
 
-  public Recipe? Delete(Guid id)
+  public bool Delete(Guid id)
   {
     var recipe = GetById(id);
     if (recipe != null)
     {
       _recipes.Remove(recipe);
+      return true;
     }
-    return recipe;
+    return false;
   }
 }

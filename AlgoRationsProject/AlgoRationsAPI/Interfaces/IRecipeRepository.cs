@@ -8,5 +8,5 @@ public interface IRecipeRepository
   Recipe? GetById(Guid id);
   void Add(Recipe recipe);
   Recipe? Update(Recipe recipe);
-  Recipe? Delete(Guid id);
+  bool Delete(Guid id);
 }
