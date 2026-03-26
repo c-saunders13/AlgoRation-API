@@ -13,7 +13,11 @@ public class RationsService(IIngredientRepository ingredientRepository, IRecipeR
       .ToDictionary(i => i.Id, i => i.AvailableQuantity);
 
     var recipes = recipeRepository.GetAll().ToList();
-    recipes.Sort((a, b) => b.Servings.CompareTo(a.Servings));
+    recipes.Sort((a, b) =>
+    {
+      var byServings = b.Servings.CompareTo(a.Servings);
+      return byServings != 0 ? byServings : a.Id.CompareTo(b.Id);
+    });
 
     var peopleFed = 0;
     foreach (var recipe in recipes)
@@ -52,9 +56,19 @@ public class RationsService(IIngredientRepository ingredientRepository, IRecipeR
 
   private static int GetMaxServings(Recipe a, Dictionary<Guid, int> availableIngredients)
   {
+    if (a.Ingredients.Count == 0)
+    {
+      return 0;
+    }
+
     var maxServings = int.MaxValue;
     foreach (var ingredient in a.Ingredients)
     {
+      if (ingredient.RequiredQuantity <= 0)
+      {
+        return 0;
+      }
+
       if (!availableIngredients.TryGetValue(ingredient.IngredientId, out var availableQuantity))
       {
         return 0;
