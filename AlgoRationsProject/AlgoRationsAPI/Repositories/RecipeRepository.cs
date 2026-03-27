@@ -38,4 +38,7 @@ public class RecipeRepository : IRecipeRepository
     }
     return false;
   }
+
+  public bool IsIngredientInUse(Guid ingredientId) =>
+    _recipes.Any(recipe => recipe.Ingredients.Any(ingredient => ingredient.IngredientId == ingredientId));
 }

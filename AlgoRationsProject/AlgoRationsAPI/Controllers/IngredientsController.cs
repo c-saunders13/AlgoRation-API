@@ -78,6 +78,12 @@ public class IngredientsController(IIngredientRepository repository) : Controlle
   [HttpDelete("{id:guid}")]
   public IActionResult Delete(Guid id)
   {
-    return repository.Delete(id) ? NoContent() : NotFound();
+    return repository.Delete(id) switch
+    {
+      IngredientDeleteResult.Deleted => NoContent(),
+      IngredientDeleteResult.NotFound => NotFound(),
+      IngredientDeleteResult.InUse => Conflict(new ErrorResponse("Ingredient is included in a recipe and cannot be deleted.")),
+      _ => StatusCode(StatusCodes.Status500InternalServerError)
+    };
   }
 }

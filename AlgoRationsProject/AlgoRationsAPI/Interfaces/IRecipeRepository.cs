@@ -9,4 +9,5 @@ public interface IRecipeRepository
   void Add(Recipe recipe);
   Recipe? Update(Recipe recipe);
   bool Delete(Guid id);
+  bool IsIngredientInUse(Guid ingredientId);
 }

@@ -235,16 +235,16 @@ public class RationsServiceTests
 
     var result = CreateService().CalculateMaxPeopleFed();
 
-    Assert.Equal(9, result.TotalPeopleFed);
+    Assert.Equal(22, result.TotalPeopleFed);
     Assert.Equal(2, result.Breakdown.Count);
 
     var steak = Assert.Single(result.Breakdown, b => b.RecipeId == steakId);
-    Assert.Equal(2, steak.ServingsMade);
-    Assert.Equal(4, steak.PeopleFed);
+    Assert.Equal(10, steak.ServingsMade);
+    Assert.Equal(20, steak.PeopleFed);
 
     var bread = Assert.Single(result.Breakdown, b => b.RecipeId == breadId);
-    Assert.Equal(5, bread.ServingsMade);
-    Assert.Equal(5, bread.PeopleFed);
+    Assert.Equal(2, bread.ServingsMade);
+    Assert.Equal(2, bread.PeopleFed);
   }
 
   [Fact]

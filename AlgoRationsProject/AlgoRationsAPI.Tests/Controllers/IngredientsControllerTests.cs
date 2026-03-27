@@ -2,6 +2,7 @@ using AlgoRationsAPI.Controllers;
 using AlgoRationsAPI.DTOs;
 using AlgoRationsAPI.Interfaces;
 using AlgoRationsAPI.Models;
+using AlgoRationsAPI.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using NSubstitute;
 
@@ -160,7 +161,7 @@ public class IngredientsControllerTests
   public void Delete_ReturnsNoContent_WhenIngredientExists()
   {
     var id = Guid.NewGuid();
-    _repository.Delete(id).Returns(true);
+    _repository.Delete(id).Returns(IngredientDeleteResult.Deleted);
 
     var result = _controller.Delete(id);
 
@@ -170,10 +171,35 @@ public class IngredientsControllerTests
   [Fact]
   public void Delete_ReturnsNotFound_WhenIngredientDoesNotExist()
   {
-    _repository.Delete(Arg.Any<Guid>()).Returns(false);
+    _repository.Delete(Arg.Any<Guid>()).Returns(IngredientDeleteResult.NotFound);
 
     var result = _controller.Delete(Guid.NewGuid());
 
     Assert.IsType<NotFoundResult>(result);
+  }
+
+  [Fact]
+  public void Delete_ReturnsConflictWithMessage_WhenIngredientIsIncludedInARecipe()
+  {
+    var recipeRepository = new RecipeRepository();
+    var ingredientRepository = new IngredientRepository(recipeRepository);
+    var controller = new IngredientsController(ingredientRepository);
+    var ingredient = ingredientRepository.Add(new Ingredient { Name = "Meat", AvailableQuantity = 2 });
+
+    recipeRepository.Add(new Recipe
+    {
+      Name = "Burger",
+      Servings = 1,
+      Ingredients =
+      [
+        new RecipeIngredient { IngredientId = ingredient.Id, RequiredQuantity = 1 }
+      ]
+    });
+
+    var result = controller.Delete(ingredient.Id);
+
+    var conflict = Assert.IsType<ConflictObjectResult>(result);
+    var error = Assert.IsType<ErrorResponse>(conflict.Value);
+    Assert.Equal("Ingredient is included in a recipe and cannot be deleted.", error.Message);
   }
 }

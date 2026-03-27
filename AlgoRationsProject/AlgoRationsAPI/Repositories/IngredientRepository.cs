@@ -3,7 +3,7 @@ using AlgoRationsAPI.Models;
 
 namespace AlgoRationsAPI.Repositories;
 
-public class IngredientRepository : IIngredientRepository
+public class IngredientRepository(IRecipeRepository recipeRepository) : IIngredientRepository
 {
   private readonly List<Ingredient> _ingredients = [];
 
@@ -29,14 +29,20 @@ public class IngredientRepository : IIngredientRepository
     return existing;
   }
 
-  public bool Delete(Guid id)
+  public IngredientDeleteResult Delete(Guid id)
   {
     var ingredient = GetById(id);
-    if (ingredient != null)
+    if (ingredient == null)
     {
-      _ingredients.Remove(ingredient);
-      return true;
+      return IngredientDeleteResult.NotFound;
     }
-    return false;
+
+    if (recipeRepository.IsIngredientInUse(id))
+    {
+      return IngredientDeleteResult.InUse;
+    }
+
+    _ingredients.Remove(ingredient);
+    return IngredientDeleteResult.Deleted;
   }
 }
