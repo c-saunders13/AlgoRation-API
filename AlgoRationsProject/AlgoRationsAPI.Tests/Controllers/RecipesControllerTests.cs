@@ -10,6 +10,7 @@ namespace AlgoRationsAPI.Tests.Controllers;
 public class RecipesControllerTests
 {
   private readonly IRecipeRepository _repository = Substitute.For<IRecipeRepository>();
+  private readonly IDataResetService _dataResetService = Substitute.For<IDataResetService>();
   private readonly RecipesController _controller;
 
   private static readonly Guid IngredientId1 = Guid.NewGuid();
@@ -17,7 +18,7 @@ public class RecipesControllerTests
 
   public RecipesControllerTests()
   {
-    _controller = new RecipesController(_repository);
+    _controller = new RecipesController(_repository, _dataResetService);
   }
 
   private static Recipe MakeRecipe(Guid? id = null) => new()

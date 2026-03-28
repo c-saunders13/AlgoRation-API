@@ -9,4 +9,5 @@ public interface IIngredientRepository
   Ingredient Add(Ingredient ingredient);
   Ingredient? Update(Ingredient ingredient);
   IngredientDeleteResult Delete(Guid id);
+  void Clear();
 }

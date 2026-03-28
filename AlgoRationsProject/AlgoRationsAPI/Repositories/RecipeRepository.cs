@@ -41,4 +41,6 @@ public class RecipeRepository : IRecipeRepository
 
   public bool IsIngredientInUse(Guid ingredientId) =>
     _recipes.Any(recipe => recipe.Ingredients.Any(ingredient => ingredient.IngredientId == ingredientId));
+
+  public void Clear() => _recipes.Clear();
 }

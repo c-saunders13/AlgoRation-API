@@ -10,4 +10,5 @@ public interface IRecipeRepository
   Recipe? Update(Recipe recipe);
   bool Delete(Guid id);
   bool IsIngredientInUse(Guid ingredientId);
+  void Clear();
 }

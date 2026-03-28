@@ -45,4 +45,6 @@ public class IngredientRepository(IRecipeRepository recipeRepository) : IIngredi
     _ingredients.Remove(ingredient);
     return IngredientDeleteResult.Deleted;
   }
+
+  public void Clear() => _ingredients.Clear();
 }

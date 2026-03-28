@@ -7,7 +7,7 @@ namespace AlgoRationsAPI.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class RecipesController(IRecipeRepository repository) : ControllerBase
+public class RecipesController(IRecipeRepository repository, IDataResetService dataResetService) : ControllerBase
 {
   [HttpGet]
   public ActionResult<IEnumerable<RecipeDto>> GetAll() =>
@@ -103,5 +103,12 @@ public class RecipesController(IRecipeRepository repository) : ControllerBase
   public IActionResult Delete(Guid id)
   {
     return repository.Delete(id) ? NoContent() : NotFound();
+  }
+
+  [HttpPost("reset")]
+  public IActionResult Reset()
+  {
+    dataResetService.Reset();
+    return NoContent();
   }
 }

@@ -18,6 +18,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddSingleton<IIngredientRepository, IngredientRepository>();
 builder.Services.AddSingleton<IRecipeRepository, RecipeRepository>();
 builder.Services.AddScoped<IRationsService, RationsService>();
+builder.Services.AddScoped<IDataResetService, DataResetService>();
 
 var app = builder.Build();
 
