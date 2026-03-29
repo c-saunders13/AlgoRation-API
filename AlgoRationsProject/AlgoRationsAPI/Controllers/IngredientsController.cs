@@ -38,6 +38,11 @@ public class IngredientsController(IIngredientRepository repository) : Controlle
   [HttpPost]
   public ActionResult<IngredientDto> Create(CreateIngredientRequest request)
   {
+    if (!ModelState.IsValid)
+    {
+      return ValidationProblem(ModelState);
+    }
+
     var ingredient = new Ingredient
     {
       Name = request.Name,
@@ -55,6 +60,11 @@ public class IngredientsController(IIngredientRepository repository) : Controlle
   [HttpPut("{id:guid}")]
   public ActionResult<IngredientDto> Update(Guid id, UpdateIngredientRequest request)
   {
+    if (!ModelState.IsValid)
+    {
+      return ValidationProblem(ModelState);
+    }
+
     var ingredient = new Ingredient
     {
       Id = id,

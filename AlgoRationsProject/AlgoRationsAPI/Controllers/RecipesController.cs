@@ -7,7 +7,10 @@ namespace AlgoRationsAPI.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class RecipesController(IRecipeRepository repository, IDataResetService dataResetService) : ControllerBase
+public class RecipesController(
+  IRecipeRepository repository,
+  IIngredientRepository ingredientRepository,
+  IDataResetService dataResetService) : ControllerBase
 {
   [HttpGet]
   public ActionResult<IEnumerable<RecipeDto>> GetAll() =>
@@ -44,6 +47,12 @@ public class RecipesController(IRecipeRepository repository, IDataResetService d
   [HttpPost]
   public ActionResult<RecipeDto> Create(CreateRecipeRequest request)
   {
+    ValidateRecipeRequest(request.Ingredients);
+    if (!ModelState.IsValid)
+    {
+      return ValidationProblem(ModelState);
+    }
+
     var recipe = new Recipe
     {
       Name = request.Name,
@@ -70,6 +79,12 @@ public class RecipesController(IRecipeRepository repository, IDataResetService d
   [HttpPut("{id:guid}")]
   public ActionResult<RecipeDto> Update(Guid id, UpdateRecipeRequest request)
   {
+    ValidateRecipeRequest(request.Ingredients);
+    if (!ModelState.IsValid)
+    {
+      return ValidationProblem(ModelState);
+    }
+
     var recipe = new Recipe
     {
       Id = id,
@@ -110,5 +125,50 @@ public class RecipesController(IRecipeRepository repository, IDataResetService d
   {
     dataResetService.Reset();
     return NoContent();
+  }
+
+  private void ValidateRecipeRequest(List<RecipeIngredientDto>? ingredients)
+  {
+    if (ingredients == null || ingredients.Count == 0)
+    {
+      return;
+    }
+
+    for (var i = 0; i < ingredients.Count; i++)
+    {
+      var ingredient = ingredients[i];
+      if (ingredient.RequiredQuantity <= 0)
+      {
+        ModelState.TryAddModelError(
+          $"Ingredients[{i}].RequiredQuantity",
+          "Required quantity must be greater than zero.");
+      }
+    }
+
+    var duplicateIngredientIds = ingredients
+      .Where(ingredient => ingredient.IngredientId != Guid.Empty)
+      .GroupBy(ingredient => ingredient.IngredientId)
+      .Where(group => group.Count() > 1)
+      .Select(group => group.Key);
+
+    foreach (var ingredientId in duplicateIngredientIds)
+    {
+      ModelState.TryAddModelError(
+        nameof(RecipeIngredientDto.IngredientId),
+        $"Ingredient '{ingredientId}' cannot appear more than once in a recipe.");
+    }
+
+    var missingIngredientIds = ingredients
+      .Where(ingredient => ingredient.IngredientId != Guid.Empty)
+      .Select(ingredient => ingredient.IngredientId)
+      .Distinct()
+      .Where(ingredientId => ingredientRepository.GetById(ingredientId) == null);
+
+    foreach (var ingredientId in missingIngredientIds)
+    {
+      ModelState.TryAddModelError(
+        nameof(RecipeIngredientDto.IngredientId),
+        $"Ingredient '{ingredientId}' does not exist.");
+    }
   }
 }

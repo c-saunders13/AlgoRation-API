@@ -112,6 +112,17 @@ public class IngredientsControllerTests
       i.Name == "Meat" && i.AvailableQuantity == 2));
   }
 
+  [Fact]
+  public void Create_ReturnsValidationProblem_WhenModelStateIsInvalid()
+  {
+    _controller.ModelState.AddModelError("Name", "Name cannot be empty or whitespace.");
+
+    var result = _controller.Create(new CreateIngredientRequest("", -1));
+
+    Assert.IsType<ObjectResult>(result.Result);
+    _repository.DidNotReceive().Add(Arg.Any<Ingredient>());
+  }
+
   // --- Update ---
 
   [Fact]
@@ -153,6 +164,17 @@ public class IngredientsControllerTests
 
     _repository.Received(1).Update(Arg.Is<Ingredient>(i =>
       i.Id == id && i.Name == "Meat" && i.AvailableQuantity == 2));
+  }
+
+  [Fact]
+  public void Update_ReturnsValidationProblem_WhenModelStateIsInvalid()
+  {
+    _controller.ModelState.AddModelError("AvailableQuantity", "Available quantity cannot be negative.");
+
+    var result = _controller.Update(Guid.NewGuid(), new UpdateIngredientRequest("Meat", -1));
+
+    Assert.IsType<ObjectResult>(result.Result);
+    _repository.DidNotReceive().Update(Arg.Any<Ingredient>());
   }
 
   // --- Delete ---

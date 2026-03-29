@@ -10,6 +10,7 @@ namespace AlgoRationsAPI.Tests.Controllers;
 public class RecipesControllerTests
 {
   private readonly IRecipeRepository _repository = Substitute.For<IRecipeRepository>();
+  private readonly IIngredientRepository _ingredientRepository = Substitute.For<IIngredientRepository>();
   private readonly IDataResetService _dataResetService = Substitute.For<IDataResetService>();
   private readonly RecipesController _controller;
 
@@ -18,7 +19,9 @@ public class RecipesControllerTests
 
   public RecipesControllerTests()
   {
-    _controller = new RecipesController(_repository, _dataResetService);
+    _ingredientRepository.GetById(IngredientId1).Returns(new Ingredient { Id = IngredientId1, Name = "Meat", AvailableQuantity = 10 });
+    _ingredientRepository.GetById(IngredientId2).Returns(new Ingredient { Id = IngredientId2, Name = "Dough", AvailableQuantity = 10 });
+    _controller = new RecipesController(_repository, _ingredientRepository, _dataResetService);
   }
 
   private static Recipe MakeRecipe(Guid? id = null) => new()
@@ -168,6 +171,60 @@ public class RecipesControllerTests
     Assert.Equal(2, capturedRecipe.Ingredients[1].RequiredQuantity);
   }
 
+  [Fact]
+  public void Create_ReturnsValidationProblem_WhenModelStateIsInvalid()
+  {
+    _controller.ModelState.AddModelError("Servings", "Servings must be greater than zero.");
+
+    var request = new CreateRecipeRequest("Pie", 0,
+      [new RecipeIngredientDto(IngredientId1, 2)]);
+
+    var result = _controller.Create(request);
+
+    Assert.IsType<ObjectResult>(result.Result);
+    _repository.DidNotReceive().Add(Arg.Any<Recipe>());
+  }
+
+  [Fact]
+  public void Create_ReturnsValidationProblem_WhenRecipeContainsDuplicateIngredients()
+  {
+    var request = new CreateRecipeRequest("Pie", 4,
+      [new RecipeIngredientDto(IngredientId1, 2), new RecipeIngredientDto(IngredientId1, 1)]);
+
+    var result = _controller.Create(request);
+
+    var validation = Assert.IsType<ObjectResult>(result.Result);
+    Assert.IsType<ValidationProblemDetails>(validation.Value);
+    _repository.DidNotReceive().Add(Arg.Any<Recipe>());
+  }
+
+  [Fact]
+  public void Create_ReturnsValidationProblem_WhenRecipeReferencesUnknownIngredient()
+  {
+    var missingIngredientId = Guid.NewGuid();
+    var request = new CreateRecipeRequest("Pie", 4,
+      [new RecipeIngredientDto(missingIngredientId, 2)]);
+
+    var result = _controller.Create(request);
+
+    var validation = Assert.IsType<ObjectResult>(result.Result);
+    Assert.IsType<ValidationProblemDetails>(validation.Value);
+    _repository.DidNotReceive().Add(Arg.Any<Recipe>());
+  }
+
+  [Fact]
+  public void Create_ReturnsValidationProblem_WhenIngredientQuantityIsNotPositive()
+  {
+    var request = new CreateRecipeRequest("Pie", 4,
+      [new RecipeIngredientDto(IngredientId1, 0)]);
+
+    var result = _controller.Create(request);
+
+    var validation = Assert.IsType<ObjectResult>(result.Result);
+    Assert.IsType<ValidationProblemDetails>(validation.Value);
+    _repository.DidNotReceive().Add(Arg.Any<Recipe>());
+  }
+
   // --- Update ---
 
   [Fact]
@@ -213,6 +270,44 @@ public class RecipesControllerTests
 
     _repository.Received(1).Update(Arg.Is<Recipe>(r =>
       r.Id == id && r.Name == "Pancakes" && r.Servings == 4));
+  }
+
+  [Fact]
+  public void Update_ReturnsValidationProblem_WhenModelStateIsInvalid()
+  {
+    _controller.ModelState.AddModelError("Ingredients", "At least one ingredient is required.");
+
+    var request = new UpdateRecipeRequest("Pancakes", 4, []);
+    var result = _controller.Update(Guid.NewGuid(), request);
+
+    Assert.IsType<ObjectResult>(result.Result);
+    _repository.DidNotReceive().Update(Arg.Any<Recipe>());
+  }
+
+  [Fact]
+  public void Update_ReturnsValidationProblem_WhenRecipeContainsDuplicateIngredients()
+  {
+    var request = new UpdateRecipeRequest("Pancakes", 4,
+      [new RecipeIngredientDto(IngredientId1, 2), new RecipeIngredientDto(IngredientId1, 1)]);
+
+    var result = _controller.Update(Guid.NewGuid(), request);
+
+    var validation = Assert.IsType<ObjectResult>(result.Result);
+    Assert.IsType<ValidationProblemDetails>(validation.Value);
+    _repository.DidNotReceive().Update(Arg.Any<Recipe>());
+  }
+
+  [Fact]
+  public void Update_ReturnsValidationProblem_WhenRecipeReferencesUnknownIngredient()
+  {
+    var request = new UpdateRecipeRequest("Pancakes", 4,
+      [new RecipeIngredientDto(Guid.NewGuid(), 2)]);
+
+    var result = _controller.Update(Guid.NewGuid(), request);
+
+    var validation = Assert.IsType<ObjectResult>(result.Result);
+    Assert.IsType<ValidationProblemDetails>(validation.Value);
+    _repository.DidNotReceive().Update(Arg.Any<Recipe>());
   }
 
   // --- Delete ---
