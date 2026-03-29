@@ -3,13 +3,13 @@ using System.ComponentModel.DataAnnotations;
 namespace AlgoRationsAPI.DTOs;
 
 public record UpdateRecipeRequest(
-        [property: Required]
-        [property: RegularExpression(@".*\S.*", ErrorMessage = "Name cannot be empty or whitespace.")]
+    [param: Required]
+    [param: RegularExpression(@".*\S.*", ErrorMessage = "Name cannot be empty or whitespace.")]
         string Name,
-        [property: Range(1, int.MaxValue, ErrorMessage = "Servings must be greater than zero.")]
+    [param: Range(1, int.MaxValue, ErrorMessage = "Servings must be greater than zero.")]
         int Servings,
-        [property: Required]
-        [property: MinLength(1, ErrorMessage = "At least one ingredient is required.")]
+    [param: Required]
+    [param: MinLength(1, ErrorMessage = "At least one ingredient is required.")]
         List<RecipeIngredientDto> Ingredients
 ) : IValidatableObject
 {
