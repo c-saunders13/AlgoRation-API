@@ -50,7 +50,7 @@ public class RecipesController(
     ValidateRecipeRequest(request.Ingredients);
     if (!ModelState.IsValid)
     {
-      return ValidationProblem(ModelState);
+      return ValidationProblem(modelStateDictionary: ModelState, statusCode: StatusCodes.Status400BadRequest);
     }
 
     var recipe = new Recipe
@@ -82,7 +82,7 @@ public class RecipesController(
     ValidateRecipeRequest(request.Ingredients);
     if (!ModelState.IsValid)
     {
-      return ValidationProblem(ModelState);
+      return ValidationProblem(modelStateDictionary: ModelState, statusCode: StatusCodes.Status400BadRequest);
     }
 
     var recipe = new Recipe

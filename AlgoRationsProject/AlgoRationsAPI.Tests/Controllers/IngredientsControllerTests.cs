@@ -119,7 +119,9 @@ public class IngredientsControllerTests
 
     var result = _controller.Create(new CreateIngredientRequest("", -1));
 
-    Assert.IsType<ObjectResult>(result.Result);
+    var validation = Assert.IsType<BadRequestObjectResult>(result.Result);
+    var details = Assert.IsType<ValidationProblemDetails>(validation.Value);
+    Assert.Equal(400, details.Status);
     _repository.DidNotReceive().Add(Arg.Any<Ingredient>());
   }
 
@@ -173,7 +175,9 @@ public class IngredientsControllerTests
 
     var result = _controller.Update(Guid.NewGuid(), new UpdateIngredientRequest("Meat", -1));
 
-    Assert.IsType<ObjectResult>(result.Result);
+    var validation = Assert.IsType<BadRequestObjectResult>(result.Result);
+    var details = Assert.IsType<ValidationProblemDetails>(validation.Value);
+    Assert.Equal(400, details.Status);
     _repository.DidNotReceive().Update(Arg.Any<Ingredient>());
   }
 

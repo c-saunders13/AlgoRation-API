@@ -40,7 +40,7 @@ public class IngredientsController(IIngredientRepository repository) : Controlle
   {
     if (!ModelState.IsValid)
     {
-      return ValidationProblem(ModelState);
+      return ValidationProblem(modelStateDictionary: ModelState, statusCode: StatusCodes.Status400BadRequest);
     }
 
     var ingredient = new Ingredient
@@ -62,7 +62,7 @@ public class IngredientsController(IIngredientRepository repository) : Controlle
   {
     if (!ModelState.IsValid)
     {
-      return ValidationProblem(ModelState);
+      return ValidationProblem(modelStateDictionary: ModelState, statusCode: StatusCodes.Status400BadRequest);
     }
 
     var ingredient = new Ingredient

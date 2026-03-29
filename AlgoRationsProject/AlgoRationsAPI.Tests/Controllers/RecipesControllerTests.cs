@@ -181,7 +181,9 @@ public class RecipesControllerTests
 
     var result = _controller.Create(request);
 
-    Assert.IsType<ObjectResult>(result.Result);
+    var validation = Assert.IsType<BadRequestObjectResult>(result.Result);
+    var details = Assert.IsType<ValidationProblemDetails>(validation.Value);
+    Assert.Equal(400, details.Status);
     _repository.DidNotReceive().Add(Arg.Any<Recipe>());
   }
 
@@ -193,8 +195,9 @@ public class RecipesControllerTests
 
     var result = _controller.Create(request);
 
-    var validation = Assert.IsType<ObjectResult>(result.Result);
-    Assert.IsType<ValidationProblemDetails>(validation.Value);
+    var validation = Assert.IsType<BadRequestObjectResult>(result.Result);
+    var details = Assert.IsType<ValidationProblemDetails>(validation.Value);
+    Assert.Equal(400, details.Status);
     _repository.DidNotReceive().Add(Arg.Any<Recipe>());
   }
 
@@ -207,8 +210,9 @@ public class RecipesControllerTests
 
     var result = _controller.Create(request);
 
-    var validation = Assert.IsType<ObjectResult>(result.Result);
-    Assert.IsType<ValidationProblemDetails>(validation.Value);
+    var validation = Assert.IsType<BadRequestObjectResult>(result.Result);
+    var details = Assert.IsType<ValidationProblemDetails>(validation.Value);
+    Assert.Equal(400, details.Status);
     _repository.DidNotReceive().Add(Arg.Any<Recipe>());
   }
 
@@ -220,8 +224,9 @@ public class RecipesControllerTests
 
     var result = _controller.Create(request);
 
-    var validation = Assert.IsType<ObjectResult>(result.Result);
-    Assert.IsType<ValidationProblemDetails>(validation.Value);
+    var validation = Assert.IsType<BadRequestObjectResult>(result.Result);
+    var details = Assert.IsType<ValidationProblemDetails>(validation.Value);
+    Assert.Equal(400, details.Status);
     _repository.DidNotReceive().Add(Arg.Any<Recipe>());
   }
 
@@ -280,7 +285,9 @@ public class RecipesControllerTests
     var request = new UpdateRecipeRequest("Pancakes", 4, []);
     var result = _controller.Update(Guid.NewGuid(), request);
 
-    Assert.IsType<ObjectResult>(result.Result);
+    var validation = Assert.IsType<BadRequestObjectResult>(result.Result);
+    var details = Assert.IsType<ValidationProblemDetails>(validation.Value);
+    Assert.Equal(400, details.Status);
     _repository.DidNotReceive().Update(Arg.Any<Recipe>());
   }
 
@@ -292,8 +299,9 @@ public class RecipesControllerTests
 
     var result = _controller.Update(Guid.NewGuid(), request);
 
-    var validation = Assert.IsType<ObjectResult>(result.Result);
-    Assert.IsType<ValidationProblemDetails>(validation.Value);
+    var validation = Assert.IsType<BadRequestObjectResult>(result.Result);
+    var details = Assert.IsType<ValidationProblemDetails>(validation.Value);
+    Assert.Equal(400, details.Status);
     _repository.DidNotReceive().Update(Arg.Any<Recipe>());
   }
 
@@ -305,8 +313,9 @@ public class RecipesControllerTests
 
     var result = _controller.Update(Guid.NewGuid(), request);
 
-    var validation = Assert.IsType<ObjectResult>(result.Result);
-    Assert.IsType<ValidationProblemDetails>(validation.Value);
+    var validation = Assert.IsType<BadRequestObjectResult>(result.Result);
+    var details = Assert.IsType<ValidationProblemDetails>(validation.Value);
+    Assert.Equal(400, details.Status);
     _repository.DidNotReceive().Update(Arg.Any<Recipe>());
   }
 
