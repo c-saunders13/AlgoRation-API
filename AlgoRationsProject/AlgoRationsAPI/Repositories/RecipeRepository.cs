@@ -24,6 +24,7 @@ public class RecipeRepository : IRecipeRepository
     {
       existing.Name = recipe.Name;
       existing.Ingredients = recipe.Ingredients;
+      existing.Servings = recipe.Servings;
     }
     return existing;
   }
