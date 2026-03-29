@@ -91,6 +91,7 @@ Right after reading the assessment question, the first implementation that came 
 - Seeded in-memory database for ease of testing and examination
 - Ingredient foreign key constraints that prevent deleting an ingredient that is a FK in a recipe
 - Basic test suite
+- Validation on input
 
 ## Run, Test, and Build
 
