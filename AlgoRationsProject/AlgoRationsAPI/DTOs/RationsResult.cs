@@ -1,8 +1,11 @@
+using AlgoRationsAPI.Models;
+
 namespace AlgoRationsAPI.DTOs;
 
 public record RationsResult(
   int TotalPeopleFed,
-  List<RecipeRationBreakdown> Breakdown
+  List<RecipeRationBreakdown> Breakdown,
+  List<Ingredient> LeftoverIngredients
 );
 
 public class RecipeRationBreakdown
@@ -12,9 +15,4 @@ public class RecipeRationBreakdown
   public int ServingsMade { get; set; }
   public int PeopleFed { get; set; }
 }
-// public record RecipeRationBreakdown(
-//   Guid RecipeId,
-//   string RecipeName,
-//   int ServingsMade,
-//   int PeopleFed
-// );
+

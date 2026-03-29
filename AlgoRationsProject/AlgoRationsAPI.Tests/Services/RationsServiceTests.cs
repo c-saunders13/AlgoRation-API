@@ -26,6 +26,10 @@ public class RationsServiceTests
 
     Assert.Equal(0, result.TotalPeopleFed);
     Assert.Empty(result.Breakdown);
+    var leftover = Assert.Single(result.LeftoverIngredients);
+    Assert.Equal(cucumberId, leftover.Id);
+    Assert.Equal("Cucumber", leftover.Name);
+    Assert.Equal(2, leftover.AvailableQuantity);
   }
 
   [Fact]
@@ -58,14 +62,19 @@ public class RationsServiceTests
 
     Assert.Equal(0, result.TotalPeopleFed);
     Assert.Empty(result.Breakdown);
+    var leftover = Assert.Single(result.LeftoverIngredients);
+    Assert.Equal(doughId, leftover.Id);
+    Assert.Equal("Dough", leftover.Name);
+    Assert.Equal(10, leftover.AvailableQuantity);
   }
 
   [Fact]
   public void CalculateMaxPeopleFed_SkipsRecipe_WhenRecipeHasNoIngredients()
   {
+    var cucumberId = Guid.NewGuid();
     _ingredientRepository.GetAll().Returns(
     [
-      new Ingredient { Id = Guid.NewGuid(), Name = "Cucumber", AvailableQuantity = 2 }
+      new Ingredient { Id = cucumberId, Name = "Cucumber", AvailableQuantity = 2 }
     ]);
 
     _recipeRepository.GetAll().Returns(
@@ -83,6 +92,10 @@ public class RationsServiceTests
 
     Assert.Equal(0, result.TotalPeopleFed);
     Assert.Empty(result.Breakdown);
+    var leftover = Assert.Single(result.LeftoverIngredients);
+    Assert.Equal(cucumberId, leftover.Id);
+    Assert.Equal("Cucumber", leftover.Name);
+    Assert.Equal(2, leftover.AvailableQuantity);
   }
 
   [Fact]
@@ -113,6 +126,10 @@ public class RationsServiceTests
 
     Assert.Equal(0, result.TotalPeopleFed);
     Assert.Empty(result.Breakdown);
+    var leftover = Assert.Single(result.LeftoverIngredients);
+    Assert.Equal(cucumberId, leftover.Id);
+    Assert.Equal("Cucumber", leftover.Name);
+    Assert.Equal(2, leftover.AvailableQuantity);
   }
 
   [Fact]
@@ -143,10 +160,14 @@ public class RationsServiceTests
 
     Assert.Equal(0, result.TotalPeopleFed);
     Assert.Empty(result.Breakdown);
+    var leftover = Assert.Single(result.LeftoverIngredients);
+    Assert.Equal(cucumberId, leftover.Id);
+    Assert.Equal("Cucumber", leftover.Name);
+    Assert.Equal(2, leftover.AvailableQuantity);
   }
 
   [Fact]
-  public void CalculateMaxPeopleFed_SortsByServings_AndPrioritizesLargerRecipes()
+  public void CalculateMaxPeopleFed_ChoosesOptimalCombination_InsteadOfGreedyOrder()
   {
     var cucumberId = Guid.NewGuid();
 
@@ -184,14 +205,19 @@ public class RationsServiceTests
 
     var result = CreateService().CalculateMaxPeopleFed();
 
-    Assert.Equal(5, result.TotalPeopleFed);
+    Assert.Equal(10, result.TotalPeopleFed);
     Assert.Single(result.Breakdown);
 
     var entry = result.Breakdown[0];
-    Assert.Equal(highServingRecipeId, entry.RecipeId);
-    Assert.Equal("Family Meal", entry.RecipeName);
-    Assert.Equal(1, entry.ServingsMade);
-    Assert.Equal(5, entry.PeopleFed);
+    Assert.Equal(lowServingRecipeId, entry.RecipeId);
+    Assert.Equal("Snack", entry.RecipeName);
+    Assert.Equal(10, entry.ServingsMade);
+    Assert.Equal(10, entry.PeopleFed);
+
+    var leftover = Assert.Single(result.LeftoverIngredients);
+    Assert.Equal(cucumberId, leftover.Id);
+    Assert.Equal("Cucumber", leftover.Name);
+    Assert.Equal(0, leftover.AvailableQuantity);
   }
 
   [Fact]
@@ -245,6 +271,14 @@ public class RationsServiceTests
     var bread = Assert.Single(result.Breakdown, b => b.RecipeId == breadId);
     Assert.Equal(2, bread.ServingsMade);
     Assert.Equal(2, bread.PeopleFed);
+
+    Assert.Equal(2, result.LeftoverIngredients.Count);
+    var leftoverMeat = Assert.Single(result.LeftoverIngredients, i => i.Id == meatId);
+    Assert.Equal("Meat", leftoverMeat.Name);
+    Assert.Equal(0, leftoverMeat.AvailableQuantity);
+    var leftoverDough = Assert.Single(result.LeftoverIngredients, i => i.Id == doughId);
+    Assert.Equal("Dough", leftoverDough.Name);
+    Assert.Equal(0, leftoverDough.AvailableQuantity);
   }
 
   [Fact]
@@ -283,5 +317,9 @@ public class RationsServiceTests
     var single = Assert.Single(result.Breakdown);
     Assert.Equal(firstId, single.RecipeId);
     Assert.Equal("First", single.RecipeName);
+    var leftover = Assert.Single(result.LeftoverIngredients);
+    Assert.Equal(ingredientId, leftover.Id);
+    Assert.Equal("Cucumber", leftover.Name);
+    Assert.Equal(0, leftover.AvailableQuantity);
   }
 }

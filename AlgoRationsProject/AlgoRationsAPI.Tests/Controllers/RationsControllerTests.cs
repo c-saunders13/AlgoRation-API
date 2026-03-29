@@ -1,6 +1,7 @@
 using AlgoRationsAPI.Controllers;
 using AlgoRationsAPI.DTOs;
 using AlgoRationsAPI.Interfaces;
+using AlgoRationsAPI.Models;
 using Microsoft.AspNetCore.Mvc;
 using NSubstitute;
 
@@ -21,6 +22,14 @@ public class RationsControllerTests
           RecipeName = "Pizza",
           ServingsMade = 2,
           PeopleFed = 8
+        }
+      ],
+      [
+        new Ingredient
+        {
+          Id = Guid.NewGuid(),
+          Name = "Cheese",
+          AvailableQuantity = 0
         }
       ]);
 

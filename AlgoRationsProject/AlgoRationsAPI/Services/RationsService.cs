@@ -8,71 +8,106 @@ public class RationsService(IIngredientRepository ingredientRepository, IRecipeR
 {
   public RationsResult CalculateMaxPeopleFed()
   {
-    var breakdownDictionary = new Dictionary<Guid, RecipeRationBreakdown>();
-    var availableIngredients = ingredientRepository.GetAll()
-      .ToDictionary(i => i.Id, i => i.AvailableQuantity);
+    var allIngredients = ingredientRepository.GetAll().ToList();
+    var availableIngredients = allIngredients.ToDictionary(i => i.Id, i => i.AvailableQuantity);
 
-    var recipes = recipeRepository.GetAll().ToList();
-    recipes.Sort((a, b) =>
-    {
-      var byServings = b.Servings.CompareTo(a.Servings);
-      return byServings != 0 ? byServings : a.Id.CompareTo(b.Id);
-    });
+    var recipes = recipeRepository.GetAll()
+      .Where(recipe => IsRecipeValid(recipe, availableIngredients))
+      .OrderByDescending(recipe => recipe.Servings)
+      .ThenBy(recipe => recipe.Id)
+      .ToList();
 
-    var peopleFed = 0;
-    foreach (var recipe in recipes)
+    if (recipes.Count == 0)
     {
-      var maxServings = GetMaxServings(recipe, availableIngredients);
-      if (maxServings == 0)
+      return new RationsResult(0, [], [.. allIngredients.Select(i => new Ingredient
+      {
+        Id = i.Id,
+        Name = i.Name,
+        AvailableQuantity = i.AvailableQuantity
+      })]);
+    }
+
+    var currentCounts = new int[recipes.Count];
+    var bestCounts = new int[recipes.Count];
+    var bestPeopleFed = 0;
+
+    SearchOptimalRations(
+      index: 0,
+      recipes,
+      availableIngredients,
+      currentCounts,
+      currentPeopleFed: 0,
+      bestCounts,
+      ref bestPeopleFed
+    );
+
+    var breakdown = new List<RecipeRationBreakdown>();
+    var leftoverQuantities = allIngredients.ToDictionary(i => i.Id, i => i.AvailableQuantity);
+
+    for (var i = 0; i < recipes.Count; i++)
+    {
+      var servingsMade = bestCounts[i];
+      if (servingsMade > 0)
+      {
+        foreach (var ingredient in recipes[i].Ingredients)
+        {
+          leftoverQuantities[ingredient.IngredientId] -= ingredient.RequiredQuantity * servingsMade;
+        }
+      }
+
+      if (servingsMade == 0)
       {
         continue;
       }
 
-      peopleFed += maxServings * recipe.Servings;
-      if (breakdownDictionary.TryGetValue(recipe.Id, out RecipeRationBreakdown? value))
+      breakdown.Add(new RecipeRationBreakdown
       {
-        breakdownDictionary[recipe.Id].ServingsMade += maxServings;
-        breakdownDictionary[recipe.Id].PeopleFed += maxServings * recipe.Servings;
-      }
-      else
-      {
-        breakdownDictionary[recipe.Id] = new RecipeRationBreakdown
-        {
-          RecipeId = recipe.Id,
-          RecipeName = recipe.Name,
-          ServingsMade = maxServings,
-          PeopleFed = maxServings * recipe.Servings
-        };
-      }
-
-      foreach (var ingredient in recipe.Ingredients)
-      {
-        availableIngredients[ingredient.IngredientId] -= ingredient.RequiredQuantity * maxServings;
-      }
+        RecipeId = recipes[i].Id,
+        RecipeName = recipes[i].Name,
+        ServingsMade = servingsMade,
+        PeopleFed = servingsMade * recipes[i].Servings
+      });
     }
 
-    return new RationsResult(peopleFed, breakdownDictionary.Values.ToList());
+    var leftoverIngredients = allIngredients.Select(i => new Ingredient
+    {
+      Id = i.Id,
+      Name = i.Name,
+      AvailableQuantity = leftoverQuantities[i.Id]
+    }).ToList();
+
+    return new RationsResult(bestPeopleFed, breakdown, leftoverIngredients);
   }
 
-  private static int GetMaxServings(Recipe a, Dictionary<Guid, int> availableIngredients)
+  private static bool IsRecipeValid(Recipe recipe, Dictionary<Guid, int> availableIngredients)
   {
-    if (a.Ingredients.Count == 0)
+    if (recipe.Ingredients.Count == 0 || recipe.Servings <= 0)
     {
-      return 0;
+      return false;
     }
 
-    var maxServings = int.MaxValue;
-    foreach (var ingredient in a.Ingredients)
+    foreach (var ingredient in recipe.Ingredients)
     {
       if (ingredient.RequiredQuantity <= 0)
       {
-        return 0;
+        return false;
       }
 
-      if (!availableIngredients.TryGetValue(ingredient.IngredientId, out var availableQuantity))
+      if (!availableIngredients.ContainsKey(ingredient.IngredientId))
       {
-        return 0;
+        return false;
       }
+    }
+
+    return true;
+  }
+
+  private static int GetMaxServings(Recipe recipe, Dictionary<Guid, int> availableIngredients)
+  {
+    var maxServings = int.MaxValue;
+    foreach (var ingredient in recipe.Ingredients)
+    {
+      var availableQuantity = availableIngredients[ingredient.IngredientId];
 
       var possibleServings = availableQuantity / ingredient.RequiredQuantity;
       if (possibleServings < maxServings)
@@ -82,5 +117,73 @@ public class RationsService(IIngredientRepository ingredientRepository, IRecipeR
     }
 
     return maxServings;
+  }
+
+  private static void SearchOptimalRations(
+    int index,
+    IReadOnlyList<Recipe> recipes,
+    Dictionary<Guid, int> availableIngredients,
+    int[] currentCounts,
+    int currentPeopleFed,
+    int[] bestCounts,
+    ref int bestPeopleFed)
+  {
+    if (index == recipes.Count)
+    {
+      if (currentPeopleFed > bestPeopleFed)
+      {
+        bestPeopleFed = currentPeopleFed;
+        Array.Copy(currentCounts, bestCounts, currentCounts.Length);
+      }
+
+      return;
+    }
+
+    var upperBound = currentPeopleFed;
+    for (var i = index; i < recipes.Count; i++)
+    {
+      upperBound += recipes[i].Servings * GetMaxServings(recipes[i], availableIngredients);
+    }
+
+    if (upperBound <= bestPeopleFed)
+    {
+      return;
+    }
+
+    var recipe = recipes[index];
+    var maxForRecipe = GetMaxServings(recipe, availableIngredients);
+
+    for (var servings = maxForRecipe; servings >= 0; servings--)
+    {
+      currentCounts[index] = servings;
+      var consumed = new List<(Guid ingredientId, int quantity)>();
+
+      if (servings > 0)
+      {
+        foreach (var ingredient in recipe.Ingredients)
+        {
+          var quantity = ingredient.RequiredQuantity * servings;
+          availableIngredients[ingredient.IngredientId] -= quantity;
+          consumed.Add((ingredient.IngredientId, quantity));
+        }
+      }
+
+      SearchOptimalRations(
+        index + 1,
+        recipes,
+        availableIngredients,
+        currentCounts,
+        currentPeopleFed + (servings * recipe.Servings),
+        bestCounts,
+        ref bestPeopleFed
+      );
+
+      foreach (var (ingredientId, quantity) in consumed)
+      {
+        availableIngredients[ingredientId] += quantity;
+      }
+    }
+
+    currentCounts[index] = 0;
   }
 }
