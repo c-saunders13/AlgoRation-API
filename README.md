@@ -88,7 +88,7 @@ Right after reading the assessment question, the first implementation that came 
 - MVC architecture
 - Repository pattern
 - Controllers for CRUDing ingredients and recipes, and for performing the rations calculation
-- Seeded in-memory database for ease of testing and examination
+- Seeded in-memory database with Entity Framework DB context
 - Ingredient foreign key constraints that prevent deleting an ingredient that is a FK in a recipe
 - Basic test suite
 - Validation on input
