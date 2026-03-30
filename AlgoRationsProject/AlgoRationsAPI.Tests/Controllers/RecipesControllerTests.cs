@@ -2,6 +2,7 @@ using AlgoRationsAPI.Controllers;
 using AlgoRationsAPI.DTOs;
 using AlgoRationsAPI.Interfaces;
 using AlgoRationsAPI.Models;
+using AlgoRationsAPI.Services;
 using Microsoft.AspNetCore.Mvc;
 using NSubstitute;
 
@@ -9,8 +10,7 @@ namespace AlgoRationsAPI.Tests.Controllers;
 
 public class RecipesControllerTests
 {
-  private readonly IRecipeRepository _repository = Substitute.For<IRecipeRepository>();
-  private readonly IIngredientRepository _ingredientRepository = Substitute.For<IIngredientRepository>();
+  private readonly IRecipeService _recipeService = Substitute.For<IRecipeService>();
   private readonly IDataResetService _dataResetService = Substitute.For<IDataResetService>();
   private readonly RecipesController _controller;
 
@@ -19,9 +19,7 @@ public class RecipesControllerTests
 
   public RecipesControllerTests()
   {
-    _ingredientRepository.GetByIdAsync(IngredientId1).Returns(Task.FromResult<Ingredient?>(new Ingredient { Id = IngredientId1, Name = "Meat", AvailableQuantity = 10 }));
-    _ingredientRepository.GetByIdAsync(IngredientId2).Returns(Task.FromResult<Ingredient?>(new Ingredient { Id = IngredientId2, Name = "Dough", AvailableQuantity = 10 }));
-    _controller = new RecipesController(_repository, _ingredientRepository, _dataResetService);
+    _controller = new RecipesController(_recipeService, _dataResetService);
   }
 
   private static Recipe MakeRecipe(Guid? id = null) => new()
@@ -50,7 +48,7 @@ public class RecipesControllerTests
   [Fact]
   public async Task GetAll_ReturnsOk_WithMappedDtos()
   {
-    _repository.GetAllAsync().Returns(Task.FromResult<IEnumerable<Recipe>>([MakeRecipe(), MakeRecipe()]));
+    _recipeService.GetAllAsync().Returns(Task.FromResult<IEnumerable<Recipe>>([MakeRecipe(), MakeRecipe()]));
 
     var result = await _controller.GetAll();
 
@@ -63,7 +61,7 @@ public class RecipesControllerTests
   public async Task GetAll_MapsDtoFieldsCorrectly()
   {
     var recipe = MakeRecipe();
-    _repository.GetAllAsync().Returns(Task.FromResult<IEnumerable<Recipe>>([recipe]));
+    _recipeService.GetAllAsync().Returns(Task.FromResult<IEnumerable<Recipe>>([recipe]));
 
     var result = await _controller.GetAll();
 
@@ -80,7 +78,7 @@ public class RecipesControllerTests
   [Fact]
   public async Task GetAll_ReturnsEmptyList_WhenNoRecipes()
   {
-    _repository.GetAllAsync().Returns(Task.FromResult<IEnumerable<Recipe>>([]));
+    _recipeService.GetAllAsync().Returns(Task.FromResult<IEnumerable<Recipe>>([]));
 
     var result = await _controller.GetAll();
 
@@ -95,7 +93,7 @@ public class RecipesControllerTests
   {
     var id = Guid.NewGuid();
     var recipe = MakeRecipe(id);
-    _repository.GetByIdAsync(id).Returns(Task.FromResult<Recipe?>(recipe));
+    _recipeService.GetByIdAsync(id).Returns(Task.FromResult<Recipe?>(recipe));
 
     var result = await _controller.GetById(id);
 
@@ -108,7 +106,7 @@ public class RecipesControllerTests
   [Fact]
   public async Task GetById_ReturnsNotFound_WhenRecipeDoesNotExist()
   {
-    _repository.GetByIdAsync(Arg.Any<Guid>()).Returns(Task.FromResult<Recipe?>(null));
+    _recipeService.GetByIdAsync(Arg.Any<Guid>()).Returns(Task.FromResult<Recipe?>(null));
 
     var result = await _controller.GetById(Guid.NewGuid());
 
@@ -121,14 +119,8 @@ public class RecipesControllerTests
   public async Task Create_ReturnsCreatedAtAction_WithDto()
   {
     var request = MakeCreateRequest();
-    Recipe? capturedRecipe = null;
-    _repository
-      .When(r => r.AddAsync(Arg.Any<Recipe>()))
-      .Do(c =>
-      {
-        capturedRecipe = c.Arg<Recipe>();
-        capturedRecipe.Id = Guid.NewGuid();
-      });
+    var created = MakeRecipe(Guid.NewGuid());
+    _recipeService.CreateAsync(request).Returns(Task.FromResult(RecipeMutationResult.Success(created)));
 
     var result = await _controller.Create(request);
 
@@ -140,35 +132,19 @@ public class RecipesControllerTests
   }
 
   [Fact]
-  public async Task Create_PassesCorrectDataToRepository()
+  public async Task Create_PassesRequestToService()
   {
     var request = MakeCreateRequest();
-    _repository.When(r => r.AddAsync(Arg.Any<Recipe>())).Do(_ => { });
+    _recipeService.CreateAsync(request).Returns(Task.FromResult(RecipeMutationResult.Success(MakeRecipe(Guid.NewGuid()))));
 
     await _controller.Create(request);
 
-    await _repository.Received(1).AddAsync(Arg.Is<Recipe>(r =>
+    await _recipeService.Received(1).CreateAsync(Arg.Is<CreateRecipeRequest>(r =>
       r.Name == "Pie" &&
       r.Servings == 4 &&
       r.Ingredients.Count == 2 &&
       r.Ingredients[0].IngredientId == IngredientId1 &&
       r.Ingredients[0].RequiredQuantity == 2));
-  }
-
-  [Fact]
-  public async Task Create_MapsIngredientsDtoCorrectly()
-  {
-    var request = MakeCreateRequest();
-    Recipe? capturedRecipe = null;
-    _repository
-      .When(r => r.AddAsync(Arg.Any<Recipe>()))
-      .Do(c => capturedRecipe = c.Arg<Recipe>());
-
-    await _controller.Create(request);
-
-    Assert.NotNull(capturedRecipe);
-    Assert.Equal(IngredientId2, capturedRecipe!.Ingredients[1].IngredientId);
-    Assert.Equal(2, capturedRecipe.Ingredients[1].RequiredQuantity);
   }
 
   [Fact]
@@ -184,51 +160,23 @@ public class RecipesControllerTests
     var validation = Assert.IsType<BadRequestObjectResult>(result.Result);
     var details = Assert.IsType<ValidationProblemDetails>(validation.Value);
     Assert.Equal(400, details.Status);
-    await _repository.DidNotReceive().AddAsync(Arg.Any<Recipe>());
+    await _recipeService.DidNotReceive().CreateAsync(Arg.Any<CreateRecipeRequest>());
   }
 
   [Fact]
-  public async Task Create_ReturnsValidationProblem_WhenRecipeContainsDuplicateIngredients()
+  public async Task Create_ReturnsValidationProblem_WhenServiceValidationFails()
   {
-    var request = new CreateRecipeRequest("Pie", 4,
-      [new RecipeIngredientDto(IngredientId1, 2), new RecipeIngredientDto(IngredientId1, 1)]);
+    var request = MakeCreateRequest();
+    _recipeService.CreateAsync(request).Returns(Task.FromResult(RecipeMutationResult.ValidationFailed(new Dictionary<string, string[]>
+    {
+      { nameof(RecipeIngredientDto.IngredientId), ["Ingredient does not exist."] }
+    })));
 
     var result = await _controller.Create(request);
 
     var validation = Assert.IsType<BadRequestObjectResult>(result.Result);
     var details = Assert.IsType<ValidationProblemDetails>(validation.Value);
     Assert.Equal(400, details.Status);
-    await _repository.DidNotReceive().AddAsync(Arg.Any<Recipe>());
-  }
-
-  [Fact]
-  public async Task Create_ReturnsValidationProblem_WhenRecipeReferencesUnknownIngredient()
-  {
-    var missingIngredientId = Guid.NewGuid();
-    _ingredientRepository.GetByIdAsync(missingIngredientId).Returns(Task.FromResult<Ingredient?>(null));
-    var request = new CreateRecipeRequest("Pie", 4,
-      [new RecipeIngredientDto(missingIngredientId, 2)]);
-
-    var result = await _controller.Create(request);
-
-    var validation = Assert.IsType<BadRequestObjectResult>(result.Result);
-    var details = Assert.IsType<ValidationProblemDetails>(validation.Value);
-    Assert.Equal(400, details.Status);
-    await _repository.DidNotReceive().AddAsync(Arg.Any<Recipe>());
-  }
-
-  [Fact]
-  public async Task Create_ReturnsValidationProblem_WhenIngredientQuantityIsNotPositive()
-  {
-    var request = new CreateRecipeRequest("Pie", 4,
-      [new RecipeIngredientDto(IngredientId1, 0)]);
-
-    var result = await _controller.Create(request);
-
-    var validation = Assert.IsType<BadRequestObjectResult>(result.Result);
-    var details = Assert.IsType<ValidationProblemDetails>(validation.Value);
-    Assert.Equal(400, details.Status);
-    await _repository.DidNotReceive().AddAsync(Arg.Any<Recipe>());
   }
 
   // --- Update ---
@@ -239,7 +187,8 @@ public class RecipesControllerTests
     var id = Guid.NewGuid();
     var updated = MakeRecipe(id);
     updated.Name = "Updated Pancakes";
-    _repository.UpdateAsync(Arg.Any<Recipe>()).Returns(Task.FromResult<Recipe?>(updated));
+    _recipeService.UpdateAsync(id, Arg.Any<UpdateRecipeRequest>())
+      .Returns(Task.FromResult(RecipeMutationResult.Success(updated)));
 
     var request = new UpdateRecipeRequest("Updated Pancakes", 4,
       [new RecipeIngredientDto(IngredientId1, 200)]);
@@ -254,28 +203,31 @@ public class RecipesControllerTests
   [Fact]
   public async Task Update_ReturnsNotFound_WhenRecipeDoesNotExist()
   {
-    _repository.UpdateAsync(Arg.Any<Recipe>()).Returns(Task.FromResult<Recipe?>(null));
+    var id = Guid.NewGuid();
+    _recipeService.UpdateAsync(id, Arg.Any<UpdateRecipeRequest>())
+      .Returns(Task.FromResult(RecipeMutationResult.NotFoundResult()));
 
-    var request = new UpdateRecipeRequest("X", 1, []);
-    var result = await _controller.Update(Guid.NewGuid(), request);
+    var request = new UpdateRecipeRequest("X", 1, [new RecipeIngredientDto(IngredientId1, 1)]);
+    var result = await _controller.Update(id, request);
 
     Assert.IsType<NotFoundResult>(result.Result);
   }
 
   [Fact]
-  public async Task Update_PassesIdAndDataToRepository()
+  public async Task Update_PassesIdAndRequestToService()
   {
     var id = Guid.NewGuid();
     var updated = MakeRecipe(id);
-    _repository.UpdateAsync(Arg.Any<Recipe>()).Returns(Task.FromResult<Recipe?>(updated));
+    _recipeService.UpdateAsync(id, Arg.Any<UpdateRecipeRequest>())
+      .Returns(Task.FromResult(RecipeMutationResult.Success(updated)));
 
     var request = new UpdateRecipeRequest("Pancakes", 4,
       [new RecipeIngredientDto(IngredientId1, 200)]);
 
     await _controller.Update(id, request);
 
-    await _repository.Received(1).UpdateAsync(Arg.Is<Recipe>(r =>
-      r.Id == id && r.Name == "Pancakes" && r.Servings == 4));
+    await _recipeService.Received(1).UpdateAsync(id, Arg.Is<UpdateRecipeRequest>(r =>
+      r.Name == "Pancakes" && r.Servings == 4));
   }
 
   [Fact]
@@ -289,37 +241,27 @@ public class RecipesControllerTests
     var validation = Assert.IsType<BadRequestObjectResult>(result.Result);
     var details = Assert.IsType<ValidationProblemDetails>(validation.Value);
     Assert.Equal(400, details.Status);
-    await _repository.DidNotReceive().UpdateAsync(Arg.Any<Recipe>());
+    await _recipeService.DidNotReceive().UpdateAsync(Arg.Any<Guid>(), Arg.Any<UpdateRecipeRequest>());
   }
 
   [Fact]
-  public async Task Update_ReturnsValidationProblem_WhenRecipeContainsDuplicateIngredients()
+  public async Task Update_ReturnsValidationProblem_WhenServiceValidationFails()
   {
-    var request = new UpdateRecipeRequest("Pancakes", 4,
-      [new RecipeIngredientDto(IngredientId1, 2), new RecipeIngredientDto(IngredientId1, 1)]);
+    var id = Guid.NewGuid();
+    _recipeService.UpdateAsync(id, Arg.Any<UpdateRecipeRequest>())
+      .Returns(Task.FromResult(RecipeMutationResult.ValidationFailed(new Dictionary<string, string[]>
+      {
+        { nameof(RecipeIngredientDto.IngredientId), ["Ingredient does not exist."] }
+      })));
 
-    var result = await _controller.Update(Guid.NewGuid(), request);
+    var request = new UpdateRecipeRequest("Pancakes", 4,
+      [new RecipeIngredientDto(IngredientId1, 2)]);
+
+    var result = await _controller.Update(id, request);
 
     var validation = Assert.IsType<BadRequestObjectResult>(result.Result);
     var details = Assert.IsType<ValidationProblemDetails>(validation.Value);
     Assert.Equal(400, details.Status);
-    await _repository.DidNotReceive().UpdateAsync(Arg.Any<Recipe>());
-  }
-
-  [Fact]
-  public async Task Update_ReturnsValidationProblem_WhenRecipeReferencesUnknownIngredient()
-  {
-    var missingIngredientId = Guid.NewGuid();
-    _ingredientRepository.GetByIdAsync(missingIngredientId).Returns(Task.FromResult<Ingredient?>(null));
-    var request = new UpdateRecipeRequest("Pancakes", 4,
-      [new RecipeIngredientDto(missingIngredientId, 2)]);
-
-    var result = await _controller.Update(Guid.NewGuid(), request);
-
-    var validation = Assert.IsType<BadRequestObjectResult>(result.Result);
-    var details = Assert.IsType<ValidationProblemDetails>(validation.Value);
-    Assert.Equal(400, details.Status);
-    await _repository.DidNotReceive().UpdateAsync(Arg.Any<Recipe>());
   }
 
   // --- Delete ---
@@ -328,7 +270,7 @@ public class RecipesControllerTests
   public async Task Delete_ReturnsNoContent_WhenRecipeExists()
   {
     var id = Guid.NewGuid();
-    _repository.DeleteAsync(id).Returns(Task.FromResult(true));
+    _recipeService.DeleteAsync(id).Returns(Task.FromResult(true));
 
     var result = await _controller.Delete(id);
 
@@ -338,7 +280,7 @@ public class RecipesControllerTests
   [Fact]
   public async Task Delete_ReturnsNotFound_WhenRecipeDoesNotExist()
   {
-    _repository.DeleteAsync(Arg.Any<Guid>()).Returns(Task.FromResult(false));
+    _recipeService.DeleteAsync(Arg.Any<Guid>()).Returns(Task.FromResult(false));
 
     var result = await _controller.Delete(Guid.NewGuid());
 
