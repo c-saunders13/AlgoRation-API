@@ -1,9 +1,11 @@
 using AlgoRationsAPI.Controllers;
+using AlgoRationsAPI.Data;
 using AlgoRationsAPI.DTOs;
 using AlgoRationsAPI.Interfaces;
 using AlgoRationsAPI.Models;
 using AlgoRationsAPI.Repositories;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 
 namespace AlgoRationsAPI.Tests.Controllers;
@@ -207,8 +209,13 @@ public class IngredientsControllerTests
   [Fact]
   public async Task Delete_ReturnsConflictWithMessage_WhenIngredientIsIncludedInARecipe()
   {
-    var recipeRepository = new RecipeRepository();
-    var ingredientRepository = new IngredientRepository(recipeRepository);
+    var options = new DbContextOptionsBuilder<AlgoRationsDbContext>()
+      .UseInMemoryDatabase(Guid.NewGuid().ToString())
+      .Options;
+
+    var context = new AlgoRationsDbContext(options);
+    var recipeRepository = new RecipeRepository(context);
+    var ingredientRepository = new IngredientRepository(context, recipeRepository);
     var controller = new IngredientsController(ingredientRepository);
     var ingredient = await ingredientRepository.AddAsync(new Ingredient { Name = "Meat", AvailableQuantity = 2 });
 

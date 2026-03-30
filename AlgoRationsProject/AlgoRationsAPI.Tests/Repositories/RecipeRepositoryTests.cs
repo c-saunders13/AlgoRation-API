@@ -1,5 +1,7 @@
+using AlgoRationsAPI.Data;
 using AlgoRationsAPI.Models;
 using AlgoRationsAPI.Repositories;
+using Microsoft.EntityFrameworkCore;
 
 namespace AlgoRationsAPI.Tests.Repositories;
 
@@ -8,7 +10,13 @@ public class RecipeRepositoryTests
   [Fact]
   public async Task Update_PersistsAllRecipeProperties()
   {
-    var repository = new RecipeRepository();
+    var dbName = Guid.NewGuid().ToString();
+    var options = new DbContextOptionsBuilder<AlgoRationsDbContext>()
+      .UseInMemoryDatabase(dbName)
+      .Options;
+
+    var context = new AlgoRationsDbContext(options);
+    var repository = new RecipeRepository(context);
     var original = new Recipe
     {
       Name = "Original",
@@ -43,7 +51,14 @@ public class RecipeRepositoryTests
     Assert.Equal(updatedIngredientId, ingredient.IngredientId);
     Assert.Equal(3, ingredient.RequiredQuantity);
 
-    var persisted = await repository.GetByIdAsync(update.Id);
+    // Verify persistence with a separate DbContext
+    var verifyOptions = new DbContextOptionsBuilder<AlgoRationsDbContext>()
+      .UseInMemoryDatabase(dbName)
+      .Options;
+
+    var verifyContext = new AlgoRationsDbContext(verifyOptions);
+    var verifyRepository = new RecipeRepository(verifyContext);
+    var persisted = await verifyRepository.GetByIdAsync(update.Id);
     Assert.NotNull(persisted);
     Assert.Equal("Updated", persisted!.Name);
     Assert.Equal(4, persisted.Servings);

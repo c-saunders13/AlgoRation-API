@@ -2,6 +2,7 @@ using AlgoRationsAPI.Data;
 using AlgoRationsAPI.Interfaces;
 using AlgoRationsAPI.Repositories;
 using AlgoRationsAPI.Services;
+using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -15,8 +16,11 @@ builder.Services.AddCors(options =>
       policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
 });
 
-builder.Services.AddSingleton<IIngredientRepository, IngredientRepository>();
-builder.Services.AddSingleton<IRecipeRepository, RecipeRepository>();
+builder.Services.AddDbContext<AlgoRationsDbContext>(options =>
+    options.UseInMemoryDatabase("AlgoRationsDb"));
+
+builder.Services.AddScoped<IIngredientRepository, IngredientRepository>();
+builder.Services.AddScoped<IRecipeRepository, RecipeRepository>();
 builder.Services.AddScoped<IRationsService, RationsService>();
 builder.Services.AddScoped<IDataResetService, DataResetService>();
 
@@ -32,9 +36,12 @@ app.UseHttpsRedirection();
 app.UseCors();
 app.MapControllers();
 
-await DataSeeder.SeedAsync(
-    app.Services.GetRequiredService<IIngredientRepository>(),
-    app.Services.GetRequiredService<IRecipeRepository>()
-);
+using (var scope = app.Services.CreateScope())
+{
+    await DataSeeder.SeedAsync(
+        scope.ServiceProvider.GetRequiredService<IIngredientRepository>(),
+        scope.ServiceProvider.GetRequiredService<IRecipeRepository>()
+    );
+}
 
 app.Run();

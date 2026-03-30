@@ -1,54 +1,79 @@
+using AlgoRationsAPI.Data;
 using AlgoRationsAPI.Interfaces;
 using AlgoRationsAPI.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace AlgoRationsAPI.Repositories;
 
-public class RecipeRepository : IRecipeRepository
+public class RecipeRepository(AlgoRationsDbContext context) : IRecipeRepository
 {
-  private readonly List<Recipe> _recipes = [];
+  public async Task<IEnumerable<Recipe>> GetAllAsync() =>
+    await context.Recipes
+      .AsNoTracking()
+      .Include(recipe => recipe.Ingredients)
+      .ToListAsync();
 
-  public Task<IEnumerable<Recipe>> GetAllAsync() =>
-    Task.FromResult<IEnumerable<Recipe>>(_recipes);
-
-  public Task<Recipe?> GetByIdAsync(Guid id) =>
-    Task.FromResult(_recipes.FirstOrDefault(r => r.Id == id));
+  public async Task<Recipe?> GetByIdAsync(Guid id) =>
+    await context.Recipes
+      .Include(recipe => recipe.Ingredients)
+      .FirstOrDefaultAsync(recipe => recipe.Id == id);
 
   public Task AddAsync(Recipe recipe)
   {
     recipe.Id = Guid.NewGuid();
-    _recipes.Add(recipe);
-    return Task.CompletedTask;
+    context.Recipes.Add(recipe);
+    return context.SaveChangesAsync();
   }
 
   public async Task<Recipe?> UpdateAsync(Recipe recipe)
   {
-    var existing = await GetByIdAsync(recipe.Id);
+    var existing = await context.Recipes
+      .Include(existingRecipe => existingRecipe.Ingredients)
+      .FirstOrDefaultAsync(existingRecipe => existingRecipe.Id == recipe.Id);
+
     if (existing != null)
     {
       existing.Name = recipe.Name;
-      existing.Ingredients = recipe.Ingredients;
       existing.Servings = recipe.Servings;
+
+      existing.Ingredients.Clear();
+      foreach (var ingredient in recipe.Ingredients)
+      {
+        existing.Ingredients.Add(new RecipeIngredient
+        {
+          IngredientId = ingredient.IngredientId,
+          RequiredQuantity = ingredient.RequiredQuantity
+        });
+      }
+
+      await context.SaveChangesAsync();
     }
+
     return existing;
   }
 
   public async Task<bool> DeleteAsync(Guid id)
   {
-    var recipe = await GetByIdAsync(id);
+    var recipe = await context.Recipes
+      .Include(existingRecipe => existingRecipe.Ingredients)
+      .FirstOrDefaultAsync(existingRecipe => existingRecipe.Id == id);
+
     if (recipe != null)
     {
-      _recipes.Remove(recipe);
+      context.Recipes.Remove(recipe);
+      await context.SaveChangesAsync();
       return true;
     }
+
     return false;
   }
 
-  public Task<bool> IsIngredientInUseAsync(Guid ingredientId) =>
-    Task.FromResult(_recipes.Any(recipe => recipe.Ingredients.Any(ingredient => ingredient.IngredientId == ingredientId)));
+  public async Task<bool> IsIngredientInUseAsync(Guid ingredientId) =>
+    await context.Recipes.AnyAsync(recipe => recipe.Ingredients.Any(ingredient => ingredient.IngredientId == ingredientId));
 
-  public Task ClearAsync()
+  public async Task ClearAsync()
   {
-    _recipes.Clear();
-    return Task.CompletedTask;
+    context.Recipes.RemoveRange(context.Recipes);
+    await context.SaveChangesAsync();
   }
 }

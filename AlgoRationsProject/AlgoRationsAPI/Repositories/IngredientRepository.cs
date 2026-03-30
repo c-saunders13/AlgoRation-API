@@ -1,23 +1,26 @@
+using AlgoRationsAPI.Data;
 using AlgoRationsAPI.Interfaces;
 using AlgoRationsAPI.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace AlgoRationsAPI.Repositories;
 
-public class IngredientRepository(IRecipeRepository recipeRepository) : IIngredientRepository
+public class IngredientRepository(AlgoRationsDbContext context, IRecipeRepository recipeRepository) : IIngredientRepository
 {
-  private readonly List<Ingredient> _ingredients = [];
+  public async Task<IEnumerable<Ingredient>> GetAllAsync() =>
+    await context.Ingredients
+      .AsNoTracking()
+      .ToListAsync();
 
-  public Task<IEnumerable<Ingredient>> GetAllAsync() =>
-    Task.FromResult<IEnumerable<Ingredient>>(_ingredients);
+  public async Task<Ingredient?> GetByIdAsync(Guid id) =>
+    await context.Ingredients.FirstOrDefaultAsync(ingredient => ingredient.Id == id);
 
-  public Task<Ingredient?> GetByIdAsync(Guid id) =>
-    Task.FromResult(_ingredients.FirstOrDefault(i => i.Id == id));
-
-  public Task<Ingredient> AddAsync(Ingredient ingredient)
+  public async Task<Ingredient> AddAsync(Ingredient ingredient)
   {
     ingredient.Id = Guid.NewGuid();
-    _ingredients.Add(ingredient);
-    return Task.FromResult(ingredient);
+    context.Ingredients.Add(ingredient);
+    await context.SaveChangesAsync();
+    return ingredient;
   }
 
   public async Task<Ingredient?> UpdateAsync(Ingredient ingredient)
@@ -27,6 +30,7 @@ public class IngredientRepository(IRecipeRepository recipeRepository) : IIngredi
     {
       existing.Name = ingredient.Name;
       existing.AvailableQuantity = ingredient.AvailableQuantity;
+      await context.SaveChangesAsync();
     }
     return existing;
   }
@@ -44,13 +48,14 @@ public class IngredientRepository(IRecipeRepository recipeRepository) : IIngredi
       return IngredientDeleteResult.InUse;
     }
 
-    _ingredients.Remove(ingredient);
+    context.Ingredients.Remove(ingredient);
+    await context.SaveChangesAsync();
     return IngredientDeleteResult.Deleted;
   }
 
-  public Task ClearAsync()
+  public async Task ClearAsync()
   {
-    _ingredients.Clear();
-    return Task.CompletedTask;
+    context.Ingredients.RemoveRange(context.Ingredients);
+    await context.SaveChangesAsync();
   }
 }

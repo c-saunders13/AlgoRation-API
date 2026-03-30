@@ -1,15 +1,35 @@
+using AlgoRationsAPI.Data;
 using AlgoRationsAPI.Models;
 using AlgoRationsAPI.Repositories;
+using Microsoft.EntityFrameworkCore;
 
 namespace AlgoRationsAPI.Tests.Repositories;
 
 public class IngredientRepositoryTests
 {
+  private static (IngredientRepository ingredientRepository, RecipeRepository recipeRepository) CreateRepositories()
+  {
+    var options = new DbContextOptionsBuilder<AlgoRationsDbContext>()
+      .UseInMemoryDatabase(Guid.NewGuid().ToString())
+      .Options;
+
+    var context = new AlgoRationsDbContext(options);
+    var recipeRepository = new RecipeRepository(context);
+    var ingredientRepository = new IngredientRepository(context, recipeRepository);
+    return (ingredientRepository, recipeRepository);
+  }
+
   [Fact]
   public async Task Update_PersistsAllIngredientProperties()
   {
-    var recipeRepository = new RecipeRepository();
-    var repository = new IngredientRepository(recipeRepository);
+    var dbName = Guid.NewGuid().ToString();
+    var options = new DbContextOptionsBuilder<AlgoRationsDbContext>()
+      .UseInMemoryDatabase(dbName)
+      .Options;
+
+    var context = new AlgoRationsDbContext(options);
+    var recipeRepository = new RecipeRepository(context);
+    var repository = new IngredientRepository(context, recipeRepository);
     var original = await repository.AddAsync(new Ingredient
     {
       Name = "Original",
@@ -30,7 +50,14 @@ public class IngredientRepositoryTests
     Assert.Equal("Updated", result.Name);
     Assert.Equal(6, result.AvailableQuantity);
 
-    var persisted = await repository.GetByIdAsync(update.Id);
+    // Verify persistence with a separate DbContext
+    var verifyOptions = new DbContextOptionsBuilder<AlgoRationsDbContext>()
+      .UseInMemoryDatabase(dbName)
+      .Options;
+
+    var verifyContext = new AlgoRationsDbContext(verifyOptions);
+    var verifyRepository = new IngredientRepository(verifyContext, new RecipeRepository(verifyContext));
+    var persisted = await verifyRepository.GetByIdAsync(update.Id);
     Assert.NotNull(persisted);
     Assert.Equal("Updated", persisted!.Name);
     Assert.Equal(6, persisted.AvailableQuantity);
@@ -39,8 +66,7 @@ public class IngredientRepositoryTests
   [Fact]
   public async Task Delete_ReturnsInUse_WhenIngredientBelongsToARecipe()
   {
-    var recipeRepository = new RecipeRepository();
-    var repository = new IngredientRepository(recipeRepository);
+    var (repository, recipeRepository) = CreateRepositories();
     var ingredient = await repository.AddAsync(new Ingredient
     {
       Name = "Meat",
@@ -66,8 +92,7 @@ public class IngredientRepositoryTests
   [Fact]
   public async Task Delete_ReturnsDeleted_WhenIngredientExistsAndIsNotUsed()
   {
-    var recipeRepository = new RecipeRepository();
-    var repository = new IngredientRepository(recipeRepository);
+    var (repository, _) = CreateRepositories();
     var ingredient = await repository.AddAsync(new Ingredient
     {
       Name = "Cheese",
@@ -83,8 +108,7 @@ public class IngredientRepositoryTests
   [Fact]
   public async Task Delete_ReturnsNotFound_WhenIngredientDoesNotExist()
   {
-    var recipeRepository = new RecipeRepository();
-    var repository = new IngredientRepository(recipeRepository);
+    var (repository, _) = CreateRepositories();
 
     var result = await repository.DeleteAsync(Guid.NewGuid());
 
@@ -94,8 +118,7 @@ public class IngredientRepositoryTests
   [Fact]
   public async Task Clear_RemovesAllIngredients()
   {
-    var recipeRepository = new RecipeRepository();
-    var repository = new IngredientRepository(recipeRepository);
+    var (repository, _) = CreateRepositories();
     await repository.AddAsync(new Ingredient { Name = "One", AvailableQuantity = 1 });
     await repository.AddAsync(new Ingredient { Name = "Two", AvailableQuantity = 2 });
 
