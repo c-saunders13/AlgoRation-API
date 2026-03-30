@@ -7,20 +7,22 @@ public class IngredientRepository(IRecipeRepository recipeRepository) : IIngredi
 {
   private readonly List<Ingredient> _ingredients = [];
 
-  public IEnumerable<Ingredient> GetAll() => _ingredients;
+  public Task<IEnumerable<Ingredient>> GetAllAsync() =>
+    Task.FromResult<IEnumerable<Ingredient>>(_ingredients);
 
-  public Ingredient? GetById(Guid id) => _ingredients.FirstOrDefault(i => i.Id == id);
+  public Task<Ingredient?> GetByIdAsync(Guid id) =>
+    Task.FromResult(_ingredients.FirstOrDefault(i => i.Id == id));
 
-  public Ingredient Add(Ingredient ingredient)
+  public Task<Ingredient> AddAsync(Ingredient ingredient)
   {
     ingredient.Id = Guid.NewGuid();
     _ingredients.Add(ingredient);
-    return ingredient;
+    return Task.FromResult(ingredient);
   }
 
-  public Ingredient? Update(Ingredient ingredient)
+  public async Task<Ingredient?> UpdateAsync(Ingredient ingredient)
   {
-    var existing = GetById(ingredient.Id);
+    var existing = await GetByIdAsync(ingredient.Id);
     if (existing != null)
     {
       existing.Name = ingredient.Name;
@@ -29,15 +31,15 @@ public class IngredientRepository(IRecipeRepository recipeRepository) : IIngredi
     return existing;
   }
 
-  public IngredientDeleteResult Delete(Guid id)
+  public async Task<IngredientDeleteResult> DeleteAsync(Guid id)
   {
-    var ingredient = GetById(id);
+    var ingredient = await GetByIdAsync(id);
     if (ingredient == null)
     {
       return IngredientDeleteResult.NotFound;
     }
 
-    if (recipeRepository.IsIngredientInUse(id))
+    if (await recipeRepository.IsIngredientInUseAsync(id))
     {
       return IngredientDeleteResult.InUse;
     }
@@ -46,5 +48,9 @@ public class IngredientRepository(IRecipeRepository recipeRepository) : IIngredi
     return IngredientDeleteResult.Deleted;
   }
 
-  public void Clear() => _ingredients.Clear();
+  public Task ClearAsync()
+  {
+    _ingredients.Clear();
+    return Task.CompletedTask;
+  }
 }

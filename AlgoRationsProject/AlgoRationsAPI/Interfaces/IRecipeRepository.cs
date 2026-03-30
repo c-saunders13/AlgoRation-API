@@ -4,11 +4,11 @@ namespace AlgoRationsAPI.Interfaces;
 
 public interface IRecipeRepository
 {
-  IEnumerable<Recipe> GetAll();
-  Recipe? GetById(Guid id);
-  void Add(Recipe recipe);
-  Recipe? Update(Recipe recipe);
-  bool Delete(Guid id);
-  bool IsIngredientInUse(Guid ingredientId);
-  void Clear();
+  Task<IEnumerable<Recipe>> GetAllAsync();
+  Task<Recipe?> GetByIdAsync(Guid id);
+  Task AddAsync(Recipe recipe);
+  Task<Recipe?> UpdateAsync(Recipe recipe);
+  Task<bool> DeleteAsync(Guid id);
+  Task<bool> IsIngredientInUseAsync(Guid ingredientId);
+  Task ClearAsync();
 }

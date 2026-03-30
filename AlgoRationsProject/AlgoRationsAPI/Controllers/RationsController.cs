@@ -9,6 +9,6 @@ namespace AlgoRationsAPI.Controllers;
 public class RationsController(IRationsService rationsService) : ControllerBase
 {
   [HttpGet("calculate")]
-  public ActionResult<RationsResult> Calculate() =>
-    Ok(rationsService.CalculateMaxPeopleFed());
+  public async Task<ActionResult<RationsResult>> Calculate() =>
+    Ok(await rationsService.CalculateMaxPeopleFedAsync());
 }

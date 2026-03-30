@@ -6,12 +6,12 @@ namespace AlgoRationsAPI.Services;
 
 public class RationsService(IIngredientRepository ingredientRepository, IRecipeRepository recipeRepository) : IRationsService
 {
-  public RationsResult CalculateMaxPeopleFed()
+  public async Task<RationsResult> CalculateMaxPeopleFedAsync()
   {
-    var allIngredients = ingredientRepository.GetAll().ToList();
+    var allIngredients = (await ingredientRepository.GetAllAsync()).ToList();
     var availableIngredients = allIngredients.ToDictionary(i => i.Id, i => i.AvailableQuantity);
 
-    var recipes = recipeRepository.GetAll()
+    var recipes = (await recipeRepository.GetAllAsync())
       .Where(recipe => IsRecipeValid(recipe, availableIngredients))
       .OrderByDescending(recipe => recipe.Servings)
       .ThenBy(recipe => recipe.Id)

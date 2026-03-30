@@ -10,9 +10,11 @@ namespace AlgoRationsAPI.Controllers;
 public class IngredientsController(IIngredientRepository repository) : ControllerBase
 {
   [HttpGet]
-  public ActionResult<IEnumerable<IngredientDto>> GetAll()
+  public async Task<ActionResult<IEnumerable<IngredientDto>>> GetAll()
   {
-    return Ok(repository.GetAll().Select(ingredient => new IngredientDto(
+    var ingredients = await repository.GetAllAsync();
+
+    return Ok(ingredients.Select(ingredient => new IngredientDto(
       ingredient.Id,
       ingredient.Name,
       ingredient.AvailableQuantity
@@ -20,9 +22,9 @@ public class IngredientsController(IIngredientRepository repository) : Controlle
   }
 
   [HttpGet("{id:guid}")]
-  public ActionResult<IngredientDto> GetById(Guid id)
+  public async Task<ActionResult<IngredientDto>> GetById(Guid id)
   {
-    var ingredient = repository.GetById(id);
+    var ingredient = await repository.GetByIdAsync(id);
     if (ingredient == null)
     {
       return NotFound();
@@ -36,7 +38,7 @@ public class IngredientsController(IIngredientRepository repository) : Controlle
   }
 
   [HttpPost]
-  public ActionResult<IngredientDto> Create(CreateIngredientRequest request)
+  public async Task<ActionResult<IngredientDto>> Create(CreateIngredientRequest request)
   {
     if (!ModelState.IsValid)
     {
@@ -49,7 +51,7 @@ public class IngredientsController(IIngredientRepository repository) : Controlle
       AvailableQuantity = request.AvailableQuantity,
     };
 
-    var created = repository.Add(ingredient);
+    var created = await repository.AddAsync(ingredient);
     return CreatedAtAction(nameof(GetById), new { id = created.Id }, new IngredientDto(
       created.Id,
       created.Name,
@@ -58,7 +60,7 @@ public class IngredientsController(IIngredientRepository repository) : Controlle
   }
 
   [HttpPut("{id:guid}")]
-  public ActionResult<IngredientDto> Update(Guid id, UpdateIngredientRequest request)
+  public async Task<ActionResult<IngredientDto>> Update(Guid id, UpdateIngredientRequest request)
   {
     if (!ModelState.IsValid)
     {
@@ -72,7 +74,7 @@ public class IngredientsController(IIngredientRepository repository) : Controlle
       AvailableQuantity = request.AvailableQuantity,
     };
 
-    var updated = repository.Update(ingredient);
+    var updated = await repository.UpdateAsync(ingredient);
     if (updated == null)
     {
       return NotFound();
@@ -86,9 +88,9 @@ public class IngredientsController(IIngredientRepository repository) : Controlle
   }
 
   [HttpDelete("{id:guid}")]
-  public IActionResult Delete(Guid id)
+  public async Task<IActionResult> Delete(Guid id)
   {
-    return repository.Delete(id) switch
+    return (await repository.DeleteAsync(id)) switch
     {
       IngredientDeleteResult.Deleted => NoContent(),
       IngredientDeleteResult.NotFound => NotFound(),

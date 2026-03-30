@@ -32,7 +32,7 @@ app.UseHttpsRedirection();
 app.UseCors();
 app.MapControllers();
 
-DataSeeder.Seed(
+await DataSeeder.SeedAsync(
     app.Services.GetRequiredService<IIngredientRepository>(),
     app.Services.GetRequiredService<IRecipeRepository>()
 );

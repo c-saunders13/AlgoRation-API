@@ -4,5 +4,5 @@ namespace AlgoRationsAPI.Interfaces;
 
 public interface IRationsService
 {
-  RationsResult CalculateMaxPeopleFed();
+  Task<RationsResult> CalculateMaxPeopleFedAsync();
 }

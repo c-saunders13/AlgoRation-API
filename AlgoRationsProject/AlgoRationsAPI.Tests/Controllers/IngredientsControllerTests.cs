@@ -21,16 +21,16 @@ public class IngredientsControllerTests
   // --- GetAll ---
 
   [Fact]
-  public void GetAll_ReturnsOk_WithMappedDtos()
+  public async Task GetAll_ReturnsOk_WithMappedDtos()
   {
     var ingredients = new List<Ingredient>
     {
       new() { Id = Guid.NewGuid(), Name = "Meat", AvailableQuantity = 2 },
       new() { Id = Guid.NewGuid(), Name = "Dough", AvailableQuantity = 2 }
     };
-    _repository.GetAll().Returns(ingredients);
+    _repository.GetAllAsync().Returns(Task.FromResult<IEnumerable<Ingredient>>(ingredients));
 
-    var result = _controller.GetAll();
+    var result = await _controller.GetAll();
 
     var ok = Assert.IsType<OkObjectResult>(result.Result);
     var dtos = Assert.IsAssignableFrom<IEnumerable<IngredientDto>>(ok.Value).ToList();
@@ -42,11 +42,11 @@ public class IngredientsControllerTests
   }
 
   [Fact]
-  public void GetAll_ReturnsEmptyList_WhenNoIngredients()
+  public async Task GetAll_ReturnsEmptyList_WhenNoIngredients()
   {
-    _repository.GetAll().Returns([]);
+    _repository.GetAllAsync().Returns(Task.FromResult<IEnumerable<Ingredient>>([]));
 
-    var result = _controller.GetAll();
+    var result = await _controller.GetAll();
 
     var ok = Assert.IsType<OkObjectResult>(result.Result);
     Assert.Empty(Assert.IsAssignableFrom<IEnumerable<IngredientDto>>(ok.Value));
@@ -55,13 +55,13 @@ public class IngredientsControllerTests
   // --- GetById ---
 
   [Fact]
-  public void GetById_ReturnsOk_WhenIngredientExists()
+  public async Task GetById_ReturnsOk_WhenIngredientExists()
   {
     var id = Guid.NewGuid();
     var ingredient = new Ingredient { Id = id, Name = "Meat", AvailableQuantity = 2 };
-    _repository.GetById(id).Returns(ingredient);
+    _repository.GetByIdAsync(id).Returns(Task.FromResult<Ingredient?>(ingredient));
 
-    var result = _controller.GetById(id);
+    var result = await _controller.GetById(id);
 
     var ok = Assert.IsType<OkObjectResult>(result.Result);
     var dto = Assert.IsType<IngredientDto>(ok.Value);
@@ -71,11 +71,11 @@ public class IngredientsControllerTests
   }
 
   [Fact]
-  public void GetById_ReturnsNotFound_WhenIngredientDoesNotExist()
+  public async Task GetById_ReturnsNotFound_WhenIngredientDoesNotExist()
   {
-    _repository.GetById(Arg.Any<Guid>()).Returns((Ingredient?)null);
+    _repository.GetByIdAsync(Arg.Any<Guid>()).Returns(Task.FromResult<Ingredient?>(null));
 
-    var result = _controller.GetById(Guid.NewGuid());
+    var result = await _controller.GetById(Guid.NewGuid());
 
     Assert.IsType<NotFoundResult>(result.Result);
   }
@@ -83,13 +83,13 @@ public class IngredientsControllerTests
   // --- Create ---
 
   [Fact]
-  public void Create_ReturnsCreatedAtAction_WithDto()
+  public async Task Create_ReturnsCreatedAtAction_WithDto()
   {
     var request = new CreateIngredientRequest("Meat", 2);
     var created = new Ingredient { Id = Guid.NewGuid(), Name = "Meat", AvailableQuantity = 2 };
-    _repository.Add(Arg.Any<Ingredient>()).Returns(created);
+    _repository.AddAsync(Arg.Any<Ingredient>()).Returns(Task.FromResult(created));
 
-    var result = _controller.Create(request);
+    var result = await _controller.Create(request);
 
     var createdAt = Assert.IsType<CreatedAtActionResult>(result.Result);
     Assert.Equal(nameof(_controller.GetById), createdAt.ActionName);
@@ -100,42 +100,42 @@ public class IngredientsControllerTests
   }
 
   [Fact]
-  public void Create_PassesCorrectDataToRepository()
+  public async Task Create_PassesCorrectDataToRepository()
   {
     var request = new CreateIngredientRequest("Meat", 2);
     var created = new Ingredient { Id = Guid.NewGuid(), Name = "Meat", AvailableQuantity = 2 };
-    _repository.Add(Arg.Any<Ingredient>()).Returns(created);
+    _repository.AddAsync(Arg.Any<Ingredient>()).Returns(Task.FromResult(created));
 
-    _controller.Create(request);
+    await _controller.Create(request);
 
-    _repository.Received(1).Add(Arg.Is<Ingredient>(i =>
+    await _repository.Received(1).AddAsync(Arg.Is<Ingredient>(i =>
       i.Name == "Meat" && i.AvailableQuantity == 2));
   }
 
   [Fact]
-  public void Create_ReturnsValidationProblem_WhenModelStateIsInvalid()
+  public async Task Create_ReturnsValidationProblem_WhenModelStateIsInvalid()
   {
     _controller.ModelState.AddModelError("Name", "Name cannot be empty or whitespace.");
 
-    var result = _controller.Create(new CreateIngredientRequest("", -1));
+    var result = await _controller.Create(new CreateIngredientRequest("", -1));
 
     var validation = Assert.IsType<BadRequestObjectResult>(result.Result);
     var details = Assert.IsType<ValidationProblemDetails>(validation.Value);
     Assert.Equal(400, details.Status);
-    _repository.DidNotReceive().Add(Arg.Any<Ingredient>());
+    await _repository.DidNotReceive().AddAsync(Arg.Any<Ingredient>());
   }
 
   // --- Update ---
 
   [Fact]
-  public void Update_ReturnsOk_WhenIngredientExists()
+  public async Task Update_ReturnsOk_WhenIngredientExists()
   {
     var id = Guid.NewGuid();
     var request = new UpdateIngredientRequest("Meat Updated", 5);
     var updated = new Ingredient { Id = id, Name = "Meat Updated", AvailableQuantity = 5 };
-    _repository.Update(Arg.Any<Ingredient>()).Returns(updated);
+    _repository.UpdateAsync(Arg.Any<Ingredient>()).Returns(Task.FromResult<Ingredient?>(updated));
 
-    var result = _controller.Update(id, request);
+    var result = await _controller.Update(id, request);
 
     var ok = Assert.IsType<OkObjectResult>(result.Result);
     var dto = Assert.IsType<IngredientDto>(ok.Value);
@@ -145,74 +145,74 @@ public class IngredientsControllerTests
   }
 
   [Fact]
-  public void Update_ReturnsNotFound_WhenIngredientDoesNotExist()
+  public async Task Update_ReturnsNotFound_WhenIngredientDoesNotExist()
   {
-    _repository.Update(Arg.Any<Ingredient>()).Returns((Ingredient?)null);
+    _repository.UpdateAsync(Arg.Any<Ingredient>()).Returns(Task.FromResult<Ingredient?>(null));
 
-    var result = _controller.Update(Guid.NewGuid(), new UpdateIngredientRequest("X", 1));
+    var result = await _controller.Update(Guid.NewGuid(), new UpdateIngredientRequest("X", 1));
 
     Assert.IsType<NotFoundResult>(result.Result);
   }
 
   [Fact]
-  public void Update_PassesIdAndDataToRepository()
+  public async Task Update_PassesIdAndDataToRepository()
   {
     var id = Guid.NewGuid();
     var request = new UpdateIngredientRequest("Meat", 2);
     var updated = new Ingredient { Id = id, Name = "Meat", AvailableQuantity = 2 };
-    _repository.Update(Arg.Any<Ingredient>()).Returns(updated);
+    _repository.UpdateAsync(Arg.Any<Ingredient>()).Returns(Task.FromResult<Ingredient?>(updated));
 
-    _controller.Update(id, request);
+    await _controller.Update(id, request);
 
-    _repository.Received(1).Update(Arg.Is<Ingredient>(i =>
+    await _repository.Received(1).UpdateAsync(Arg.Is<Ingredient>(i =>
       i.Id == id && i.Name == "Meat" && i.AvailableQuantity == 2));
   }
 
   [Fact]
-  public void Update_ReturnsValidationProblem_WhenModelStateIsInvalid()
+  public async Task Update_ReturnsValidationProblem_WhenModelStateIsInvalid()
   {
     _controller.ModelState.AddModelError("AvailableQuantity", "Available quantity cannot be negative.");
 
-    var result = _controller.Update(Guid.NewGuid(), new UpdateIngredientRequest("Meat", -1));
+    var result = await _controller.Update(Guid.NewGuid(), new UpdateIngredientRequest("Meat", -1));
 
     var validation = Assert.IsType<BadRequestObjectResult>(result.Result);
     var details = Assert.IsType<ValidationProblemDetails>(validation.Value);
     Assert.Equal(400, details.Status);
-    _repository.DidNotReceive().Update(Arg.Any<Ingredient>());
+    await _repository.DidNotReceive().UpdateAsync(Arg.Any<Ingredient>());
   }
 
   // --- Delete ---
 
   [Fact]
-  public void Delete_ReturnsNoContent_WhenIngredientExists()
+  public async Task Delete_ReturnsNoContent_WhenIngredientExists()
   {
     var id = Guid.NewGuid();
-    _repository.Delete(id).Returns(IngredientDeleteResult.Deleted);
+    _repository.DeleteAsync(id).Returns(Task.FromResult(IngredientDeleteResult.Deleted));
 
-    var result = _controller.Delete(id);
+    var result = await _controller.Delete(id);
 
     Assert.IsType<NoContentResult>(result);
   }
 
   [Fact]
-  public void Delete_ReturnsNotFound_WhenIngredientDoesNotExist()
+  public async Task Delete_ReturnsNotFound_WhenIngredientDoesNotExist()
   {
-    _repository.Delete(Arg.Any<Guid>()).Returns(IngredientDeleteResult.NotFound);
+    _repository.DeleteAsync(Arg.Any<Guid>()).Returns(Task.FromResult(IngredientDeleteResult.NotFound));
 
-    var result = _controller.Delete(Guid.NewGuid());
+    var result = await _controller.Delete(Guid.NewGuid());
 
     Assert.IsType<NotFoundResult>(result);
   }
 
   [Fact]
-  public void Delete_ReturnsConflictWithMessage_WhenIngredientIsIncludedInARecipe()
+  public async Task Delete_ReturnsConflictWithMessage_WhenIngredientIsIncludedInARecipe()
   {
     var recipeRepository = new RecipeRepository();
     var ingredientRepository = new IngredientRepository(recipeRepository);
     var controller = new IngredientsController(ingredientRepository);
-    var ingredient = ingredientRepository.Add(new Ingredient { Name = "Meat", AvailableQuantity = 2 });
+    var ingredient = await ingredientRepository.AddAsync(new Ingredient { Name = "Meat", AvailableQuantity = 2 });
 
-    recipeRepository.Add(new Recipe
+    await recipeRepository.AddAsync(new Recipe
     {
       Name = "Burger",
       Servings = 1,
@@ -222,7 +222,7 @@ public class IngredientsControllerTests
       ]
     });
 
-    var result = controller.Delete(ingredient.Id);
+    var result = await controller.Delete(ingredient.Id);
 
     var conflict = Assert.IsType<ConflictObjectResult>(result);
     var error = Assert.IsType<ErrorResponse>(conflict.Value);

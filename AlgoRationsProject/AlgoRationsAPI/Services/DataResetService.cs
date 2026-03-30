@@ -5,10 +5,10 @@ namespace AlgoRationsAPI.Services;
 
 public class DataResetService(IIngredientRepository ingredientRepository, IRecipeRepository recipeRepository) : IDataResetService
 {
-  public void Reset()
+  public async Task ResetAsync()
   {
-    recipeRepository.Clear();
-    ingredientRepository.Clear();
-    DataSeeder.Seed(ingredientRepository, recipeRepository);
+    await recipeRepository.ClearAsync();
+    await ingredientRepository.ClearAsync();
+    await DataSeeder.SeedAsync(ingredientRepository, recipeRepository);
   }
 }

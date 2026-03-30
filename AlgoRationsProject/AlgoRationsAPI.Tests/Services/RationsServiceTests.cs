@@ -13,16 +13,16 @@ public class RationsServiceTests
   private RationsService CreateService() => new(_ingredientRepository, _recipeRepository);
 
   [Fact]
-  public void CalculateMaxPeopleFed_ReturnsZero_WhenNoRecipes()
+  public async Task CalculateMaxPeopleFed_ReturnsZero_WhenNoRecipes()
   {
     var cucumberId = Guid.NewGuid();
-    _ingredientRepository.GetAll().Returns(
+    _ingredientRepository.GetAllAsync().Returns(Task.FromResult<IEnumerable<Ingredient>>(
     [
       new Ingredient { Id = cucumberId, Name = "Cucumber", AvailableQuantity = 2 }
-    ]);
-    _recipeRepository.GetAll().Returns([]);
+    ]));
+    _recipeRepository.GetAllAsync().Returns(Task.FromResult<IEnumerable<Recipe>>([]));
 
-    var result = CreateService().CalculateMaxPeopleFed();
+    var result = await CreateService().CalculateMaxPeopleFedAsync();
 
     Assert.Equal(0, result.TotalPeopleFed);
     Assert.Empty(result.Breakdown);
@@ -33,17 +33,17 @@ public class RationsServiceTests
   }
 
   [Fact]
-  public void CalculateMaxPeopleFed_SkipsRecipe_WhenIngredientMissing()
+  public async Task CalculateMaxPeopleFed_SkipsRecipe_WhenIngredientMissing()
   {
     var meatId = Guid.NewGuid();
     var doughId = Guid.NewGuid();
 
-    _ingredientRepository.GetAll().Returns(
+    _ingredientRepository.GetAllAsync().Returns(Task.FromResult<IEnumerable<Ingredient>>(
     [
       new Ingredient { Id = doughId, Name = "Dough", AvailableQuantity = 10 }
-    ]);
+    ]));
 
-    _recipeRepository.GetAll().Returns(
+    _recipeRepository.GetAllAsync().Returns(Task.FromResult<IEnumerable<Recipe>>(
     [
       new Recipe
       {
@@ -56,9 +56,9 @@ public class RationsServiceTests
           new RecipeIngredient { IngredientId = meatId, RequiredQuantity = 2 }
         ]
       }
-    ]);
+    ]));
 
-    var result = CreateService().CalculateMaxPeopleFed();
+    var result = await CreateService().CalculateMaxPeopleFedAsync();
 
     Assert.Equal(0, result.TotalPeopleFed);
     Assert.Empty(result.Breakdown);
@@ -69,15 +69,15 @@ public class RationsServiceTests
   }
 
   [Fact]
-  public void CalculateMaxPeopleFed_SkipsRecipe_WhenRecipeHasNoIngredients()
+  public async Task CalculateMaxPeopleFed_SkipsRecipe_WhenRecipeHasNoIngredients()
   {
     var cucumberId = Guid.NewGuid();
-    _ingredientRepository.GetAll().Returns(
+    _ingredientRepository.GetAllAsync().Returns(Task.FromResult<IEnumerable<Ingredient>>(
     [
       new Ingredient { Id = cucumberId, Name = "Cucumber", AvailableQuantity = 2 }
-    ]);
+    ]));
 
-    _recipeRepository.GetAll().Returns(
+    _recipeRepository.GetAllAsync().Returns(Task.FromResult<IEnumerable<Recipe>>(
     [
       new Recipe
       {
@@ -86,9 +86,9 @@ public class RationsServiceTests
         Servings = 4,
         Ingredients = []
       }
-    ]);
+    ]));
 
-    var result = CreateService().CalculateMaxPeopleFed();
+    var result = await CreateService().CalculateMaxPeopleFedAsync();
 
     Assert.Equal(0, result.TotalPeopleFed);
     Assert.Empty(result.Breakdown);
@@ -99,16 +99,16 @@ public class RationsServiceTests
   }
 
   [Fact]
-  public void CalculateMaxPeopleFed_SkipsRecipe_WhenRequiredQuantityIsZero()
+  public async Task CalculateMaxPeopleFed_SkipsRecipe_WhenRequiredQuantityIsZero()
   {
     var cucumberId = Guid.NewGuid();
 
-    _ingredientRepository.GetAll().Returns(
+    _ingredientRepository.GetAllAsync().Returns(Task.FromResult<IEnumerable<Ingredient>>(
     [
       new Ingredient { Id = cucumberId, Name = "Cucumber", AvailableQuantity = 2 }
-    ]);
+    ]));
 
-    _recipeRepository.GetAll().Returns(
+    _recipeRepository.GetAllAsync().Returns(Task.FromResult<IEnumerable<Recipe>>(
     [
       new Recipe
       {
@@ -120,9 +120,9 @@ public class RationsServiceTests
           new RecipeIngredient { IngredientId = cucumberId, RequiredQuantity = 0 }
         ]
       }
-    ]);
+    ]));
 
-    var result = CreateService().CalculateMaxPeopleFed();
+    var result = await CreateService().CalculateMaxPeopleFedAsync();
 
     Assert.Equal(0, result.TotalPeopleFed);
     Assert.Empty(result.Breakdown);
@@ -133,16 +133,16 @@ public class RationsServiceTests
   }
 
   [Fact]
-  public void CalculateMaxPeopleFed_SkipsRecipe_WhenRequiredQuantityIsNegative()
+  public async Task CalculateMaxPeopleFed_SkipsRecipe_WhenRequiredQuantityIsNegative()
   {
     var cucumberId = Guid.NewGuid();
 
-    _ingredientRepository.GetAll().Returns(
+    _ingredientRepository.GetAllAsync().Returns(Task.FromResult<IEnumerable<Ingredient>>(
     [
       new Ingredient { Id = cucumberId, Name = "Cucumber", AvailableQuantity = 2 }
-    ]);
+    ]));
 
-    _recipeRepository.GetAll().Returns(
+    _recipeRepository.GetAllAsync().Returns(Task.FromResult<IEnumerable<Recipe>>(
     [
       new Recipe
       {
@@ -154,9 +154,9 @@ public class RationsServiceTests
           new RecipeIngredient { IngredientId = cucumberId, RequiredQuantity = -10 }
         ]
       }
-    ]);
+    ]));
 
-    var result = CreateService().CalculateMaxPeopleFed();
+    var result = await CreateService().CalculateMaxPeopleFedAsync();
 
     Assert.Equal(0, result.TotalPeopleFed);
     Assert.Empty(result.Breakdown);
@@ -167,19 +167,19 @@ public class RationsServiceTests
   }
 
   [Fact]
-  public void CalculateMaxPeopleFed_ChoosesOptimalCombination_InsteadOfGreedyOrder()
+  public async Task CalculateMaxPeopleFed_ChoosesOptimalCombination_InsteadOfGreedyOrder()
   {
     var cucumberId = Guid.NewGuid();
 
-    _ingredientRepository.GetAll().Returns(
+    _ingredientRepository.GetAllAsync().Returns(Task.FromResult<IEnumerable<Ingredient>>(
     [
       new Ingredient { Id = cucumberId, Name = "Cucumber", AvailableQuantity = 10 }
-    ]);
+    ]));
 
     var highServingRecipeId = Guid.NewGuid();
     var lowServingRecipeId = Guid.NewGuid();
 
-    _recipeRepository.GetAll().Returns(
+    _recipeRepository.GetAllAsync().Returns(Task.FromResult<IEnumerable<Recipe>>(
     [
       new Recipe
       {
@@ -201,9 +201,9 @@ public class RationsServiceTests
           new RecipeIngredient { IngredientId = cucumberId, RequiredQuantity = 10 }
         ]
       }
-    ]);
+    ]));
 
-    var result = CreateService().CalculateMaxPeopleFed();
+    var result = await CreateService().CalculateMaxPeopleFedAsync();
 
     Assert.Equal(10, result.TotalPeopleFed);
     Assert.Single(result.Breakdown);
@@ -221,21 +221,21 @@ public class RationsServiceTests
   }
 
   [Fact]
-  public void CalculateMaxPeopleFed_ReturnsBreakdown_ForMultipleRecipes()
+  public async Task CalculateMaxPeopleFed_ReturnsBreakdown_ForMultipleRecipes()
   {
     var meatId = Guid.NewGuid();
     var doughId = Guid.NewGuid();
 
-    _ingredientRepository.GetAll().Returns(
+    _ingredientRepository.GetAllAsync().Returns(Task.FromResult<IEnumerable<Ingredient>>(
     [
       new Ingredient { Id = meatId, Name = "Meat", AvailableQuantity = 10 },
       new Ingredient { Id = doughId, Name = "Dough", AvailableQuantity = 4 }
-    ]);
+    ]));
 
     var steakId = Guid.NewGuid();
     var breadId = Guid.NewGuid();
 
-    _recipeRepository.GetAll().Returns(
+    _recipeRepository.GetAllAsync().Returns(Task.FromResult<IEnumerable<Recipe>>(
     [
       new Recipe
       {
@@ -257,9 +257,9 @@ public class RationsServiceTests
           new RecipeIngredient { IngredientId = doughId, RequiredQuantity = 2 }
         ]
       }
-    ]);
+    ]));
 
-    var result = CreateService().CalculateMaxPeopleFed();
+    var result = await CreateService().CalculateMaxPeopleFedAsync();
 
     Assert.Equal(22, result.TotalPeopleFed);
     Assert.Equal(2, result.Breakdown.Count);
@@ -282,18 +282,18 @@ public class RationsServiceTests
   }
 
   [Fact]
-  public void CalculateMaxPeopleFed_UsesDeterministicTieBreak_WhenServingsAreEqual()
+  public async Task CalculateMaxPeopleFed_UsesDeterministicTieBreak_WhenServingsAreEqual()
   {
     var ingredientId = Guid.NewGuid();
-    _ingredientRepository.GetAll().Returns(
+    _ingredientRepository.GetAllAsync().Returns(Task.FromResult<IEnumerable<Ingredient>>(
     [
       new Ingredient { Id = ingredientId, Name = "Cucumber", AvailableQuantity = 10 }
-    ]);
+    ]));
 
     var firstId = Guid.Parse("00000000-0000-0000-0000-000000000001");
     var secondId = Guid.Parse("00000000-0000-0000-0000-000000000002");
 
-    _recipeRepository.GetAll().Returns(
+    _recipeRepository.GetAllAsync().Returns(Task.FromResult<IEnumerable<Recipe>>(
     [
       new Recipe
       {
@@ -309,9 +309,9 @@ public class RationsServiceTests
         Servings = 3,
         Ingredients = [new RecipeIngredient { IngredientId = ingredientId, RequiredQuantity = 10 }]
       }
-    ]);
+    ]));
 
-    var result = CreateService().CalculateMaxPeopleFed();
+    var result = await CreateService().CalculateMaxPeopleFedAsync();
 
     Assert.Equal(3, result.TotalPeopleFed);
     var single = Assert.Single(result.Breakdown);

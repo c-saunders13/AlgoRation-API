@@ -7,19 +7,22 @@ public class RecipeRepository : IRecipeRepository
 {
   private readonly List<Recipe> _recipes = [];
 
-  public IEnumerable<Recipe> GetAll() => _recipes;
+  public Task<IEnumerable<Recipe>> GetAllAsync() =>
+    Task.FromResult<IEnumerable<Recipe>>(_recipes);
 
-  public Recipe? GetById(Guid id) => _recipes.FirstOrDefault(r => r.Id == id);
+  public Task<Recipe?> GetByIdAsync(Guid id) =>
+    Task.FromResult(_recipes.FirstOrDefault(r => r.Id == id));
 
-  public void Add(Recipe recipe)
+  public Task AddAsync(Recipe recipe)
   {
     recipe.Id = Guid.NewGuid();
     _recipes.Add(recipe);
+    return Task.CompletedTask;
   }
 
-  public Recipe? Update(Recipe recipe)
+  public async Task<Recipe?> UpdateAsync(Recipe recipe)
   {
-    var existing = GetById(recipe.Id);
+    var existing = await GetByIdAsync(recipe.Id);
     if (existing != null)
     {
       existing.Name = recipe.Name;
@@ -29,9 +32,9 @@ public class RecipeRepository : IRecipeRepository
     return existing;
   }
 
-  public bool Delete(Guid id)
+  public async Task<bool> DeleteAsync(Guid id)
   {
-    var recipe = GetById(id);
+    var recipe = await GetByIdAsync(id);
     if (recipe != null)
     {
       _recipes.Remove(recipe);
@@ -40,8 +43,12 @@ public class RecipeRepository : IRecipeRepository
     return false;
   }
 
-  public bool IsIngredientInUse(Guid ingredientId) =>
-    _recipes.Any(recipe => recipe.Ingredients.Any(ingredient => ingredient.IngredientId == ingredientId));
+  public Task<bool> IsIngredientInUseAsync(Guid ingredientId) =>
+    Task.FromResult(_recipes.Any(recipe => recipe.Ingredients.Any(ingredient => ingredient.IngredientId == ingredientId)));
 
-  public void Clear() => _recipes.Clear();
+  public Task ClearAsync()
+  {
+    _recipes.Clear();
+    return Task.CompletedTask;
+  }
 }

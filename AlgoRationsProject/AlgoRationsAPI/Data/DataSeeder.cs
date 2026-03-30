@@ -5,17 +5,17 @@ namespace AlgoRationsAPI.Data;
 
 public static class DataSeeder
 {
-  public static void Seed(IIngredientRepository ingredients, IRecipeRepository recipes)
+  public static async Task SeedAsync(IIngredientRepository ingredients, IRecipeRepository recipes)
   {
-    var cucumber = ingredients.Add(new Ingredient { Name = "Cucumber", AvailableQuantity = 2 });
-    var olives = ingredients.Add(new Ingredient { Name = "Olives", AvailableQuantity = 2 });
-    var lettuce = ingredients.Add(new Ingredient { Name = "Lettuce", AvailableQuantity = 3 });
-    var meat = ingredients.Add(new Ingredient { Name = "Meat", AvailableQuantity = 6 });
-    var tomato = ingredients.Add(new Ingredient { Name = "Tomato", AvailableQuantity = 6 });
-    var cheese = ingredients.Add(new Ingredient { Name = "Cheese", AvailableQuantity = 8 });
-    var dough = ingredients.Add(new Ingredient { Name = "Dough", AvailableQuantity = 10 });
+    var cucumber = await ingredients.AddAsync(new Ingredient { Name = "Cucumber", AvailableQuantity = 2 });
+    var olives = await ingredients.AddAsync(new Ingredient { Name = "Olives", AvailableQuantity = 2 });
+    var lettuce = await ingredients.AddAsync(new Ingredient { Name = "Lettuce", AvailableQuantity = 3 });
+    var meat = await ingredients.AddAsync(new Ingredient { Name = "Meat", AvailableQuantity = 6 });
+    var tomato = await ingredients.AddAsync(new Ingredient { Name = "Tomato", AvailableQuantity = 6 });
+    var cheese = await ingredients.AddAsync(new Ingredient { Name = "Cheese", AvailableQuantity = 8 });
+    var dough = await ingredients.AddAsync(new Ingredient { Name = "Dough", AvailableQuantity = 10 });
 
-    recipes.Add(new Recipe
+    await recipes.AddAsync(new Recipe
     {
       Name = "Burger",
       Servings = 1,
@@ -29,7 +29,7 @@ public static class DataSeeder
       ]
     });
 
-    recipes.Add(new Recipe
+    await recipes.AddAsync(new Recipe
     {
       Name = "Pie",
       Servings = 1,
@@ -40,7 +40,7 @@ public static class DataSeeder
       ]
     });
 
-    recipes.Add(new Recipe
+    await recipes.AddAsync(new Recipe
     {
       Name = "Sandwich",
       Servings = 1,
@@ -51,7 +51,7 @@ public static class DataSeeder
       ]
     });
 
-    recipes.Add(new Recipe
+    await recipes.AddAsync(new Recipe
     {
       Name = "Pasta",
       Servings = 2,
@@ -64,7 +64,7 @@ public static class DataSeeder
       ]
     });
 
-    recipes.Add(new Recipe
+    await recipes.AddAsync(new Recipe
     {
       Name = "Salad",
       Servings = 3,
@@ -78,7 +78,7 @@ public static class DataSeeder
       ]
     });
 
-    recipes.Add(new Recipe
+    await recipes.AddAsync(new Recipe
     {
       Name = "Pizza",
       Servings = 4,

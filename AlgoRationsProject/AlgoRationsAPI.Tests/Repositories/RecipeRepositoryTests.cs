@@ -6,7 +6,7 @@ namespace AlgoRationsAPI.Tests.Repositories;
 public class RecipeRepositoryTests
 {
   [Fact]
-  public void Update_PersistsAllRecipeProperties()
+  public async Task Update_PersistsAllRecipeProperties()
   {
     var repository = new RecipeRepository();
     var original = new Recipe
@@ -19,7 +19,7 @@ public class RecipeRepositoryTests
       ]
     };
 
-    repository.Add(original);
+    await repository.AddAsync(original);
 
     var updatedIngredientId = Guid.NewGuid();
     var update = new Recipe
@@ -33,7 +33,7 @@ public class RecipeRepositoryTests
       ]
     };
 
-    var result = repository.Update(update);
+    var result = await repository.UpdateAsync(update);
 
     Assert.NotNull(result);
     Assert.Equal(update.Id, result!.Id);
@@ -43,7 +43,7 @@ public class RecipeRepositoryTests
     Assert.Equal(updatedIngredientId, ingredient.IngredientId);
     Assert.Equal(3, ingredient.RequiredQuantity);
 
-    var persisted = repository.GetById(update.Id);
+    var persisted = await repository.GetByIdAsync(update.Id);
     Assert.NotNull(persisted);
     Assert.Equal("Updated", persisted!.Name);
     Assert.Equal(4, persisted.Servings);

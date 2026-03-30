@@ -13,8 +13,11 @@ public class RecipesController(
   IDataResetService dataResetService) : ControllerBase
 {
   [HttpGet]
-  public ActionResult<IEnumerable<RecipeDto>> GetAll() =>
-      Ok(repository.GetAll().Select(recipe => new RecipeDto(
+  public async Task<ActionResult<IEnumerable<RecipeDto>>> GetAll()
+  {
+    var recipes = await repository.GetAllAsync();
+
+    return Ok(recipes.Select(recipe => new RecipeDto(
         recipe.Id,
         recipe.Name,
         recipe.Servings,
@@ -23,11 +26,12 @@ public class RecipesController(
           i.RequiredQuantity
         ))]
       )));
+  }
 
   [HttpGet("{id:guid}")]
-  public ActionResult<RecipeDto> GetById(Guid id)
+  public async Task<ActionResult<RecipeDto>> GetById(Guid id)
   {
-    var recipe = repository.GetById(id);
+    var recipe = await repository.GetByIdAsync(id);
     if (recipe == null)
     {
       return NotFound();
@@ -45,9 +49,9 @@ public class RecipesController(
   }
 
   [HttpPost]
-  public ActionResult<RecipeDto> Create(CreateRecipeRequest request)
+  public async Task<ActionResult<RecipeDto>> Create(CreateRecipeRequest request)
   {
-    ValidateRecipeRequest(request.Ingredients);
+    await ValidateRecipeRequestAsync(request.Ingredients);
     if (!ModelState.IsValid)
     {
       return ValidationProblem(modelStateDictionary: ModelState, statusCode: StatusCodes.Status400BadRequest);
@@ -64,7 +68,7 @@ public class RecipesController(
       })]
     };
 
-    repository.Add(recipe);
+    await repository.AddAsync(recipe);
     return CreatedAtAction(nameof(GetById), new { id = recipe.Id }, new RecipeDto(
       recipe.Id,
       recipe.Name,
@@ -77,9 +81,9 @@ public class RecipesController(
   }
 
   [HttpPut("{id:guid}")]
-  public ActionResult<RecipeDto> Update(Guid id, UpdateRecipeRequest request)
+  public async Task<ActionResult<RecipeDto>> Update(Guid id, UpdateRecipeRequest request)
   {
-    ValidateRecipeRequest(request.Ingredients);
+    await ValidateRecipeRequestAsync(request.Ingredients);
     if (!ModelState.IsValid)
     {
       return ValidationProblem(modelStateDictionary: ModelState, statusCode: StatusCodes.Status400BadRequest);
@@ -97,7 +101,7 @@ public class RecipesController(
       })]
     };
 
-    var updated = repository.Update(recipe);
+    var updated = await repository.UpdateAsync(recipe);
     if (updated == null)
     {
       return NotFound();
@@ -115,19 +119,19 @@ public class RecipesController(
   }
 
   [HttpDelete("{id:guid}")]
-  public IActionResult Delete(Guid id)
+  public async Task<IActionResult> Delete(Guid id)
   {
-    return repository.Delete(id) ? NoContent() : NotFound();
+    return await repository.DeleteAsync(id) ? NoContent() : NotFound();
   }
 
   [HttpPost("reset")]
-  public IActionResult Reset()
+  public async Task<IActionResult> Reset()
   {
-    dataResetService.Reset();
+    await dataResetService.ResetAsync();
     return NoContent();
   }
 
-  private void ValidateRecipeRequest(List<RecipeIngredientDto>? ingredients)
+  private async Task ValidateRecipeRequestAsync(List<RecipeIngredientDto>? ingredients)
   {
     if (ingredients == null || ingredients.Count == 0)
     {
@@ -162,9 +166,15 @@ public class RecipesController(
       .Where(ingredient => ingredient.IngredientId != Guid.Empty)
       .Select(ingredient => ingredient.IngredientId)
       .Distinct()
-      .Where(ingredientId => ingredientRepository.GetById(ingredientId) == null);
+      .ToList();
 
-    foreach (var ingredientId in missingIngredientIds)
+    var ingredientChecks = await Task.WhenAll(missingIngredientIds.Select(async ingredientId => new
+    {
+      IngredientId = ingredientId,
+      Exists = await ingredientRepository.GetByIdAsync(ingredientId) != null
+    }));
+
+    foreach (var ingredientId in ingredientChecks.Where(check => !check.Exists).Select(check => check.IngredientId))
     {
       ModelState.TryAddModelError(
         nameof(RecipeIngredientDto.IngredientId),

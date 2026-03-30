@@ -10,7 +10,7 @@ namespace AlgoRationsAPI.Tests.Controllers;
 public class RationsControllerTests
 {
   [Fact]
-  public void Calculate_ReturnsOk_WithServiceResult()
+  public async Task Calculate_ReturnsOk_WithServiceResult()
   {
     var service = Substitute.For<IRationsService>();
     var expected = new RationsResult(
@@ -33,10 +33,10 @@ public class RationsControllerTests
         }
       ]);
 
-    service.CalculateMaxPeopleFed().Returns(expected);
+    service.CalculateMaxPeopleFedAsync().Returns(Task.FromResult(expected));
     var controller = new RationsController(service);
 
-    var result = controller.Calculate();
+    var result = await controller.Calculate();
 
     var ok = Assert.IsType<OkObjectResult>(result.Result);
     var actual = Assert.IsType<RationsResult>(ok.Value);
