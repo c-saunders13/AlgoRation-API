@@ -90,7 +90,7 @@ public class IngredientsController(IIngredientRepository repository) : Controlle
   [HttpDelete("{id:guid}")]
   public async Task<IActionResult> Delete(Guid id)
   {
-    return (await repository.DeleteAsync(id)) switch
+    return await repository.DeleteAsync(id) switch
     {
       IngredientDeleteResult.Deleted => NoContent(),
       IngredientDeleteResult.NotFound => NotFound(),

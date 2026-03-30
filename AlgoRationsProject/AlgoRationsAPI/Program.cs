@@ -21,6 +21,7 @@ builder.Services.AddDbContext<AlgoRationsDbContext>(options =>
 
 builder.Services.AddScoped<IIngredientRepository, IngredientRepository>();
 builder.Services.AddScoped<IRecipeRepository, RecipeRepository>();
+builder.Services.AddScoped<IRecipeService, RecipeService>();
 builder.Services.AddScoped<IRationsService, RationsService>();
 builder.Services.AddScoped<IDataResetService, DataResetService>();
 
